@@ -265,8 +265,8 @@ with col1:
                         # 테스트 케이스 데이터를 문자열로 변환
                         test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
                         
-# AI 프롬프트 생성
-prompt = f"""[역할 부여]
+                        # AI 프롬프트 생성
+                        prompt = f"""[역할 부여]
 너는 나와 같이 IT SaaS에 다니는 QA 전문가, QA 엔지니어로 일하고 있어.
 (1) 테스트 설계, 테스트 케이스 작성 
 (2) 자동화 구현 (우선 모니터링용으로) 
