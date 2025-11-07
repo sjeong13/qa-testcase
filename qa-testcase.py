@@ -57,22 +57,22 @@ if 'search_history' not in st.session_state:
 
 # 페이지 설정
 st.set_page_config(
-    page_title="QA 테스트 케이스 어시스턴트",
-    page_icon="🧪",
+    page_title="테케봇 (QA Test Case Assistant)",
+    page_icon="👾",
     layout="wide"
 )
 
-st.title("🧪 AI 기반 QA 테스트 케이스 어시스턴트")
+st.title("AI 기반 QA Testcase Assistant (일명 테케봇!)")
 st.markdown("---")
 
 # 사이드바 - 테스트 케이스 관리
 with st.sidebar:
-    st.header("📚 테스트 케이스 관리")
+    st.header("👾 테스트 케이스 관리")
     
 # 테스트 케이스 추가
-with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
-    st.markdown("### 📝 테스트 케이스 입력")
-    st.info("💡 표에서 직접 입력하거나, 엑셀/구글시트에서 복사한 데이터를 붙여넣으세요.")
+with st.expander("➕ [QA팀 전용] 테스트 케이스 추가", expanded=False):
+    st.markdown("## 📝 테스트 케이스 입력")
+    st.info("💡  표에서 직접 입력하거나, 엑셀/구글시트에서 데이터를 복사해서 붙여넣으세요.")
     
     # 세션 스테이트에 편집용 데이터프레임 초기화
     if 'edit_df' not in st.session_state:
@@ -269,7 +269,245 @@ with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
                         }
                     }
                     st.session_state.test_cases.append(structured_test)
-                    added_count += 1        
+                    added_count += 1
+                
+                if added_count > 0:
+                    save_test_cases_to_file(st.session_state.test_cases)
+                    # 테이블 초기화
+                    st.session_state.edit_df = pd.DataFrame({
+                        'NO': [''],
+                        'CATEGORY': [''],
+                        'DEPTH 1': [''],
+                        'DEPTH 2': [''],
+                        'DEPTH 3': [''],
+                        'PRE-CONDITION': [''],
+                        'STEP': [''],
+                        'EXPECT RESULT': ['']
+                    })
+                    st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다!")
+                    st.rerun()
+                else:
+                    st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
+    
+    with col2:
+        # 샘플 다운로드 버튼
+        sample_df = pd.DataFrame({
+            'NO': ['1', '2', '3'],
+            'CATEGORY': ['1. UI 및 진입 경로', '2. 공동구매 메뉴', '3. 주문'],
+            'DEPTH 1': ['(BO) 쇼핑 > 상품목록', '공동구매', '주문하기'],
+            'DEPTH 2': ['상품 등록', '브랜드 정보 입력', '회원 주문'],
+            'DEPTH 3': ['PC', '', ''],
+            'PRE-CONDITION': ['', '브랜드 정보 없음', '로그인 상태'],
+            'STEP': ['1. 상품 목록 - 상품 등록 버튼을 클릭합니다.\n2. 상품 등록 페이지 내 가로 해상도가 1024px 초과로 조정합니다.', '[공동구매 만들기] 버튼 클릭', '장바구니에서 주문하기 클릭'],
+            'EXPECT RESULT': ['1. 신.상품등록 페이지가 PC UI로 출력되는지 확인합니다.', '브랜드 정보 입력 모달 출력', '주문서 페이지로 이동']
+        })
+        
+        if EXCEL_AVAILABLE:
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                sample_df.to_excel(writer, index=False, sheet_name='샘플')
+            output.seek(0)
+            
+            st.download_button(
+                label="📥 샘플 Excel 다운로드",
+                data=output,
+                file_name="test_case_sample.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            csv = sample_df.to_csv(index=False, encoding='utf-8-sig')
+            st.download_button(
+                label="📥 샘플 CSV 다운로드",
+                data=csv,
+                file_name="test_case_sample.csv",
+                mime="text/csv"
+            )
+    
+    # 샘플 데이터 로드
+    if st.button("📝 샘플 테스트 케이스 로드"):
+        sample_cases = [
+            {
+                "id": 1,
+                "category": "회원가입",
+                "name": "로그인/가입 모달로 사용 ON/OFF 테스트",
+                "description": "'로그인/가입 모달로 사용' 기능 활성화 여부에 따라 회원, 주문 관련 동작이 정상인지 확인",
+                "steps": [
+                    "디자인 모드 > 공통 디자인 설정에서 회원가입 모달 사용 ON 설정",
+                    "비회원이 회원가입 시도",
+                    "모달이 정상적으로 표시되는지 확인",
+                    "로그인/가입 모달 사용 OFF 설정하여 동작 확인",
+                ],
+                "related_features": ["회원가입", "로그인", "주문", "가입", "구매"],
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            },
+            {
+                "id": 2,
+                "category": "회원가입",
+                "name": "가입 유형별 테스트",
+                "description": "일반 이메일 가입, 소셜 가입이 모두 정상 작동하는지 확인",
+                "steps": [
+                    "이메일 가입 버튼 클릭 > 이메일, 비밀번호 입력 후 가입 > 가입 완료 확인",
+                    "카카오 로그인 또는 카카오 싱크로 회원가입 완료 시도",
+                    "구글 로그인으로 회원가입 완료 테스트"
+                    "네이버 로그인으로 회원가입 완료 테스트",
+                    "라인 로그인으로 회원가입 완료 테스트",
+                    "애플 로그인으로 회원가입 완료 테스트",
+                    "페이스북 로그인으로 회원가입 완료 테스트"
+
+                ],
+                "related_features": ["회원가입", "이메일", "소셜로그인", "카카오", "구글", "페이스북", "네이버", "애플", "라인" "로그인", "주문", "가입", "구매"],
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            },
+            {
+                "id": 3,
+                "category": "회원가입",
+                "name": "회원 유형별 가입 테스트",
+                "description": "일반 회원, 사업자 회원, 새 사용자 추가 유형으로 가입이 되는지 확인",
+                "steps": [
+                    "일반 회원으로 가입 진행 > 필수 정보 입력 및 가입 완료",
+                    "사업자 회원 선택 후 사업자 정보 입력 > 가입 완료"
+                    "'BO 환경설정 > 회원가입·그룹·등급에서 사용자 추가' 기능 사용 > 엔드유저가 FO에서 사용자가 추가한 회원 유형으로 회원가입 완료"
+                ],
+                "related_features": ["회원가입", "일반회원", "사업자회원", "가입", "주문", "구매", "가입유형"],
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            },
+            {
+                "id": 4,
+                "category": "주문",
+                "name": "회원 주문 프로세스 테스트",
+                "description": "로그인한 회원의 주문 전체 프로세스 검증",
+                "steps": [
+                    "상품 상세페이지에서 [구매하기] 버튼 클릭 > 로그인 상태 확인 > 주문서로 이동 > 주문 완료",
+                    "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 상태 확인 > 주문서로 이동 > 주문 완료]",
+                ],
+                "related_features": ["주문", "회원", "장바구니", "결제", "구매", "상품 상세페이지"],
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            },
+            {
+                "id": 5,
+                "category": "주문",
+                "name": "비회원 주문 프로세스 테스트",
+                "description": "비로그인 상태에서 주문이 가능한지 확인",
+                "steps": [
+                    "로그아웃 상태 확인",
+                    "상품 선택 및 장바구니 담기",
+                    "상품 상세페이지에서 [구매하기] 버튼 클릭 > 로그인 페이지 또는 로그인 모달에서 [비회원 주문] 버튼 클릭 > 주문서로 이동 > 주문 완료",
+                    "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 페이지 또는 로그인 모달에서 [비회원 주문] 버튼 클릭 > 주문서로 이동 > 주문 완료]",
+                ],
+                "related_features": ["주문", "비회원", "장바구니", "결제", "구매", "상품 상세페이지"],
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            },
+            {
+                "id": 6,
+                "category": "결제",
+                "name": "국내 전자 결제 수단별 테스트",
+                "description": "신용카드, 계좌이체, 간편결제 등 다양한 결제 수단 테스트",
+                "steps": [
+                    "무통장 입금 결제 테스트"
+                    "신용카드 결제 선택 및 완료",
+                    "가상계좌 결제 테스트"
+                    "실시간 계좌이체 결제 테스트",
+                    "카카오페이 간편결제(직연동) 결제 테스트",
+                    "네이버페이 주문형 결제 테스트",
+                    "네이버페이 결제형 결제 테스트"
+                    "카카오페이 간편결제(이니시스) 결제 테스트",
+                    "토스페이(직연동) 결제 테스트",
+                    "PAYCO 결제 테스트",
+                    "삼성페이 결제 테스트",
+                    "휴대폰 결제 테스트",
+                    "정기구독 결제 테스트",
+                    "톡체크아웃 결제 테스트",
+                    "결제 실패 시나리오 테스트"
+                ],
+                "related_features": ["결제", "신용카드", "간편결제", "주문", "PG"],
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+        ]
+        st.session_state.test_cases = sample_cases
+        save_test_cases_to_file(st.session_state.test_cases)  # 파일로 저장
+        st.success("✅ 샘플 테스트 케이스가 로드되었습니다!")
+        st.rerun()
+    
+    # 현재 테스트 케이스 목록
+    st.markdown("---")
+    col_save, col_load = st.columns(2)
+
+    with col_save:
+        if st.button("💾 파일로 저장"):
+            if save_test_cases_to_file(st.session_state.test_cases):
+                st.success("저장 완료!")
+
+    with col_load:
+        if st.button("📂 파일에서 불러오기"):
+            loaded_cases = load_test_cases_from_file()
+            if loaded_cases:
+                st.session_state.test_cases = loaded_cases
+                st.success(f"{len(loaded_cases)}개 불러오기 완료!")
+                st.rerun()
+
+    # 요약만 표시, 상세는 접기
+    st.subheader(f"📋 저장된 테스트 케이스")
+    st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
+
+    with st.expander("📊 카테고리별 통계", expanded=False):
+        # 통계만 표시
+
+    with st.expander("📝 전체 테스트 케이스 보기", expanded=False):
+        # 상세 목록
+    
+    if st.session_state.test_cases:
+        for tc in st.session_state.test_cases:
+            # 구조화된 데이터가 있는 경우 더 자세히 표시
+            if 'structured_data' in tc:
+                data = tc['structured_data']
+                header = f"[{data['category']}] {data['depth1']}"
+                if data.get('depth2'):
+                    header += f" > {data['depth2']}"
+            else:
+                header = f"[{tc['category']}] {tc['name']}"
+                
+            with st.expander(header):
+                if 'structured_data' in tc:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**NO:** {data.get('no', '')}")
+                        st.write(f"**CATEGORY:** {data.get('category', '')}")
+                        st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
+                        if data.get('depth2'):
+                            st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
+                        if data.get('depth3'):
+                            st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
+                    with col2:
+                        if data.get('pre_condition'):
+                            st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
+                        st.write(f"**STEP:** {data.get('step', '')}")
+                        st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
+                else:
+                    st.write(f"**설명:** {tc['description']}")
+                    if tc.get('related_features'):
+                        st.write(f"**연관 기능:** {', '.join(tc['related_features'])}")
+                        
+                if st.button(f"삭제", key=f"delete_{tc['id']}"):
+                    st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
+                    save_test_cases_to_file(st.session_state.test_cases)  # 파일로 저장
+                    st.rerun()
+
+# 메인 영역
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    st.header("🔍 AI 기반 테스트 케이스 추천")
+    
+    if len(st.session_state.test_cases) == 0:
+        st.warning("⚠️ 먼저 테스트 케이스를 추가하거나 샘플 데이터를 로드해주세요.")
+    else:
+        search_query = st.text_area(
+            "테스트하고 싶은 기능을 입력하세요. 설명을 상세하게 적을수록 AI는 더 정확한 케이스를 찾아서 추천해줍니다!",
+            placeholder="예: 상품별 구매평 연동 기능 QA. BO 쇼핑 > 구매평 > 구매평 연동에 해당 기능이 추가될 예정. 테스트 케이스 30개 이상 만들어봐",
+            height=150
+            key="search_input"
+        )
+        
         if st.button("🤖 AI 추천 받기", type="primary"):
             if search_query:
                 with st.spinner("AI가 연관된 테스트 케이스를 찾고 있습니다..."):
@@ -539,7 +777,7 @@ with col2:
     
     if st.session_state.search_history:
         for i, history in enumerate(reversed(st.session_state.search_history[-5:]), 1):
-            with st.expander(f"{history['timestamp'][:10]} - {history['query'][:20]}...", expanded=(i==1)):
+            with st.expander(f"{history['timestamp'][:10]} - {history['query']}", expanded=(i==1)):
                 st.write(f"**검색어:** {history['query']}")
                 st.write(f"**시간:** {history['timestamp']}")
                 existing_count = len(history['response'].get('existing_test_cases', []))
@@ -555,7 +793,6 @@ st.markdown("""
 ### 💡 사용 방법
 1. 테스트 케이스를 추가하거나 샘플 데이터를 로드하세요
 2. **검색창**에 테스트하고 싶은 기능을 입력하세요 (예: "주문 QA", "로그인 테스트", "공동구매 메뉴")
-   - **여러 줄 입력이 가능**하므로 상세하게 작성할 수 있습니다!
 3. **AI가 자동으로** 기존 테스트 케이스를 활용하고 신규 테스트 케이스를 생성합니다
 4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel/CSV로 다운로드할 수 있습니다
 
@@ -565,9 +802,4 @@ st.markdown("""
 - 📋 표 형식의 구조화된 테스트 케이스 생성
 - 🔄 의존성 기반 테스트 순서 추천
 - 📥 Excel(.xlsx) 또는 CSV 파일로 내보내기 기능
-- 📊 간소화된 테스트 케이스 목록 (카테고리별 통계)
-
-### 🆕 개선 사항
-- ✨ **여러 줄 입력 지원**: 검색 입력란에서 엔터키로 줄바꿈이 가능합니다
-- 📦 **간소화된 목록 표시**: 저장된 테스트 케이스는 요약 정보만 표시되고, 상세 내용은 expander로 접을 수 있습니다
 """)
