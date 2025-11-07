@@ -6,6 +6,15 @@ import os
 import pandas as pd
 from io import BytesIO
 
+# Excel 지원 확인
+try:
+    import openpyxl
+    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+    EXCEL_AVAILABLE = True
+except ImportError:
+    EXCEL_AVAILABLE = False
+    st.warning("⚠️ Excel 다운로드 기능을 사용하려면 터미널에서 다음 명령을 실행하세요: pip install openpyxl")
+
 # Google Gemini API 클라이언트 초기화
 @st.cache_resource
 def get_gemini_client():
@@ -430,72 +439,82 @@ IO, BO, FO는 서로 연관도 많이 되어 있고, 얽혀있어.
                                     }
                                 )
                                 
-                                # Excel 다운로드 버튼
-                                # BytesIO 객체 생성
-                                output = BytesIO()
-                                
-                                # Excel Writer 생성 및 DataFrame 쓰기
-                                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                                    df.to_excel(writer, index=False, sheet_name='테스트케이스')
+                                # 다운로드 버튼 (Excel 또는 CSV)
+                                if EXCEL_AVAILABLE:
+                                    # Excel 다운로드 버튼
+                                    # BytesIO 객체 생성
+                                    output = BytesIO()
                                     
-                                    # 워크시트 가져오기
-                                    workbook = writer.book
-                                    worksheet = writer.sheets['테스트케이스']
-                                    
-                                    # 헤더 스타일 적용
-                                    from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-                                    
-                                    header_fill = PatternFill(start_color='4A90A4', end_color='4A90A4', fill_type='solid')
-                                    header_font = Font(bold=True, color='FFFFFF')
-                                    center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-                                    thin_border = Border(
-                                        left=Side(style='thin'),
-                                        right=Side(style='thin'),
-                                        top=Side(style='thin'),
-                                        bottom=Side(style='thin')
-                                    )
-                                    
-                                    # 헤더 행 스타일 적용
-                                    for cell in worksheet[1]:
-                                        cell.fill = header_fill
-                                        cell.font = header_font
-                                        cell.alignment = center_alignment
-                                        cell.border = thin_border
-                                    
-                                    # 데이터 행 스타일 적용
-                                    for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
-                                        for cell in row:
-                                            cell.alignment = Alignment(vertical='center', wrap_text=True)
+                                    # Excel Writer 생성 및 DataFrame 쓰기
+                                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                        df.to_excel(writer, index=False, sheet_name='테스트케이스')
+                                        
+                                        # 워크시트 가져오기
+                                        workbook = writer.book
+                                        worksheet = writer.sheets['테스트케이스']
+                                        
+                                        # 헤더 스타일 적용
+                                        header_fill = PatternFill(start_color='4A90A4', end_color='4A90A4', fill_type='solid')
+                                        header_font = Font(bold=True, color='FFFFFF')
+                                        center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                                        thin_border = Border(
+                                            left=Side(style='thin'),
+                                            right=Side(style='thin'),
+                                            top=Side(style='thin'),
+                                            bottom=Side(style='thin')
+                                        )
+                                        
+                                        # 헤더 행 스타일 적용
+                                        for cell in worksheet[1]:
+                                            cell.fill = header_fill
+                                            cell.font = header_font
+                                            cell.alignment = center_alignment
                                             cell.border = thin_border
+                                        
+                                        # 데이터 행 스타일 적용
+                                        for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
+                                            for cell in row:
+                                                cell.alignment = Alignment(vertical='center', wrap_text=True)
+                                                cell.border = thin_border
+                                        
+                                        # 컬럼 너비 조정
+                                        column_widths = {
+                                            'A': 5,   # NO
+                                            'B': 15,  # CATEGORY
+                                            'C': 15,  # DEPTH 1
+                                            'D': 20,  # DEPTH 2
+                                            'E': 20,  # DEPTH 3
+                                            'F': 30,  # PRE-CONDITION
+                                            'G': 40,  # STEP
+                                            'H': 40   # EXPECT RESULT
+                                        }
+                                        
+                                        for column, width in column_widths.items():
+                                            worksheet.column_dimensions[column].width = width
+                                        
+                                        # 행 높이 자동 조정
+                                        for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
+                                            worksheet.row_dimensions[row[0].row].height = 30
                                     
-                                    # 컬럼 너비 조정
-                                    column_widths = {
-                                        'A': 5,   # NO
-                                        'B': 15,  # CATEGORY
-                                        'C': 15,  # DEPTH 1
-                                        'D': 20,  # DEPTH 2
-                                        'E': 20,  # DEPTH 3
-                                        'F': 30,  # PRE-CONDITION
-                                        'G': 40,  # STEP
-                                        'H': 40   # EXPECT RESULT
-                                    }
+                                    # BytesIO 객체의 포인터를 처음으로 되돌림
+                                    output.seek(0)
                                     
-                                    for column, width in column_widths.items():
-                                        worksheet.column_dimensions[column].width = width
-                                    
-                                    # 행 높이 자동 조정
-                                    for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row):
-                                        worksheet.row_dimensions[row[0].row].height = 30
-                                
-                                # BytesIO 객체의 포인터를 처음으로 되돌림
-                                output.seek(0)
-                                
-                                st.download_button(
-                                    label="📥 테스트 케이스 Excel로 다운로드",
-                                    data=output,
-                                    file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                )
+                                    st.download_button(
+                                        label="📥 테스트 케이스 Excel로 다운로드",
+                                        data=output,
+                                        file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                    )
+                                else:
+                                    # CSV 다운로드 버튼 (폴백)
+                                    csv = df.to_csv(index=False, encoding='utf-8-sig')
+                                    st.download_button(
+                                        label="📥 테스트 케이스 CSV로 다운로드",
+                                        data=csv,
+                                        file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                        mime="text/csv"
+                                    )
+                                    st.info("💡 Excel 형식으로 다운로드하려면 'pip install openpyxl' 명령을 실행하세요.")
                             
                             # 테스트 순서 설명
                             if ai_response.get("test_order"):
@@ -534,12 +553,12 @@ st.markdown("""
 1. 테스트 케이스를 추가하거나 샘플 데이터를 로드하세요
 2. **검색창**에 테스트하고 싶은 기능을 입력하세요 (예: "주문 QA", "로그인 테스트", "공동구매 메뉴")
 3. **AI가 자동으로** 기존 테스트 케이스를 활용하고 신규 테스트 케이스를 생성합니다
-4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel로 다운로드할 수 있습니다
+4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel/CSV로 다운로드할 수 있습니다
 
 ### 🎯 주요 기능
 - ✅ 테스트 케이스 학습 및 저장
 - 🤖 AI 기반 연관 테스트 케이스 추론
 - 📋 표 형식의 구조화된 테스트 케이스 생성
 - 🔄 의존성 기반 테스트 순서 추천
-- 📥 Excel 파일(.xlsx)로 내보내기 기능
+- 📥 Excel(.xlsx) 또는 CSV 파일로 내보내기 기능
 """)
