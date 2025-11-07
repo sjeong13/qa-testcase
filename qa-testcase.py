@@ -301,7 +301,14 @@ IO, BO, FO는 서로 연관도 많이 되어 있고, 얽혀있어.
 2. 그 기능이 작동하기 위해 **의존하는 다른 기능**들을 추론할 것
 3. 의존하는 기능들의 테스트 케이스도 포함할 것
 4. 논리적인 순서로 테스트 체크리스트를 만들 것
-5. 테스트 케이스 양식을 따를 것 [양식: CATEGORY, Depth 1, Depth2(선택), Depth3(선택), Pre-Condition(선택), Step, Expect Result]
+5. 다음 테스트 케이스 양식을 따를 것
+    - CATEGORY
+    - DEPTH 1
+    - DEPTH 2(선택사항)
+    - DEPTH 3(선택사항)
+    - PRE-CONDITION(선택사항)
+    - STEP
+    - EXPECT RESULT
 
 응답 형식:
 ```json
