@@ -71,52 +71,141 @@ with st.sidebar:
     
 # 테스트 케이스 추가
 with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
-    st.markdown("**자유 형식으로 작성하세요!**")
-    st.caption("예: # 주문 취소 테스트\n- 로그인 후 주문 내역 확인\n- 취소 가능한 주문 선택...")
+    st.markdown("### 📝 테스트 케이스 입력")
+    st.info("💡 엑셀에서 복사한 데이터를 아래 텍스트 영역에 붙여넣으세요. 탭으로 구분된 데이터를 자동으로 인식합니다.")
     
-    test_content = st.text_area(
-        "테스트 케이스 내용",
-        height=300,
-        placeholder="""예시:
-# 카테고리: 주문
-
-## 테스트: 회원 주문 취소 프로세스
-
-**목적**: 주문 완료 후 취소가 정상적으로 처리되는지 확인
-
-**테스트 순서**:
-1. 로그인 상태 확인
-2. 마이페이지 > 주문내역 이동
-3. 최근 주문 중 취소 가능한 주문 선택
-4. 취소 사유 선택
-5. 주문 취소 버튼 클릭
-6. 취소 완료 확인
-
-**연관 기능**: 주문, 회원, 마이페이지, 결제환불
-
-**추가 확인사항**:
-- 취소 후 포인트/쿠폰 복구 확인
-- 결제 취소 알림톡 발송 확인
-"""
+    # 테이블 형식 예시 표시
+    st.markdown("**입력 형식 (탭으로 구분):**")
+    example_df = pd.DataFrame({
+        'NO': ['1', '2'],
+        'CATEGORY': ['회원가입', '주문'],
+        'DEPTH 1': ['공동구매', '주문하기'],
+        'DEPTH 2': ['브랜드 정보 입력', '회원 주문'],
+        'DEPTH 3': ['', ''],
+        'PRE-CONDITION': ['브랜드 정보 없음', '로그인 상태'],
+        'STEP': ['[공동구매 만들기] 버튼 클릭', '장바구니에서 주문하기 클릭'],
+        'EXPECT RESULT': ['브랜드 정보 입력 모달 출력', '주문서 페이지로 이동']
+    })
+    st.dataframe(example_df, use_container_width=True, height=120)
+    
+    st.markdown("---")
+    
+    # 텍스트 영역에 붙여넣기
+    test_table_input = st.text_area(
+        "테스트 케이스 데이터 입력 (엑셀에서 복사 → 붙여넣기)",
+        height=200,
+        placeholder="""엑셀에서 복사한 데이터를 여기에 붙여넣으세요.
+예시:
+1	회원가입	공동구매	브랜드 정보 입력		브랜드 정보 없음	[공동구매 만들기] 버튼 클릭	브랜드 정보 입력 모달 출력
+2	주문	주문하기	회원 주문		로그인 상태	장바구니에서 주문하기 클릭	주문서 페이지로 이동""",
+        help="엑셀에서 NO, CATEGORY, DEPTH 1-3, PRE-CONDITION, STEP, EXPECT RESULT 컬럼의 데이터를 복사하여 붙여넣으세요."
     )
+    
+    # 또는 개별 입력 폼 (선택사항)
+    with st.expander("📋 개별 항목 입력 (선택사항)", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            no = st.number_input("NO", min_value=1, value=1)
+            category = st.text_input("CATEGORY", placeholder="예: 회원가입, 주문, 결제")
+            depth1 = st.text_input("DEPTH 1", placeholder="예: 공동구매")
+            depth2 = st.text_input("DEPTH 2 (선택)", placeholder="예: 브랜드 정보 입력")
+        with col2:
+            depth3 = st.text_input("DEPTH 3 (선택)", placeholder="")
+            pre_condition = st.text_input("PRE-CONDITION (선택)", placeholder="예: 브랜드 정보 없음")
+            step = st.text_area("STEP", placeholder="예: [공동구매 만들기] 버튼 클릭", height=68)
+            expect_result = st.text_area("EXPECT RESULT", placeholder="예: 브랜드 정보 입력 모달 출력", height=68)
         
-    if st.button("테스트 케이스 추가"):
-        if test_content.strip():
-            new_test_case = {
-                "id": len(st.session_state.test_cases) + 1,
-                "category": "자유형식",  # 나중에 AI가 분석할 수 있음
-                "name": f"테스트 케이스 {len(st.session_state.test_cases) + 1}",
-                "description": test_content.strip(),  # 전체 내용을 여기에
-                "steps": [],  # 빈 리스트
-                "related_features": [],  # 빈 리스트
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            st.session_state.test_cases.append(new_test_case)
-            save_test_cases_to_file(st.session_state.test_cases)
-            st.success(f"✅ 테스트 케이스가 추가되었습니다!")
-            st.rerun()
+        if st.button("➕ 개별 항목 추가"):
+            if category and depth1 and step and expect_result:
+                structured_test = {
+                    "id": len(st.session_state.test_cases) + 1,
+                    "category": category,
+                    "name": f"{category} - {depth1}",
+                    "description": f"NO: {no}\nCATEGORY: {category}\nDEPTH1: {depth1}\nDEPTH2: {depth2}\nDEPTH3: {depth3}\nPRE-CONDITION: {pre_condition}\nSTEP: {step}\nEXPECT RESULT: {expect_result}",
+                    "steps": [step],
+                    "related_features": [category, depth1, depth2, depth3].filter(None),
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "structured_data": {
+                        "no": no,
+                        "category": category,
+                        "depth1": depth1,
+                        "depth2": depth2,
+                        "depth3": depth3,
+                        "pre_condition": pre_condition,
+                        "step": step,
+                        "expect_result": expect_result
+                    }
+                }
+                st.session_state.test_cases.append(structured_test)
+                save_test_cases_to_file(st.session_state.test_cases)
+                st.success(f"✅ 테스트 케이스가 추가되었습니다!")
+                st.rerun()
+            else:
+                st.error("필수 항목(CATEGORY, DEPTH 1, STEP, EXPECT RESULT)을 모두 입력해주세요.")
+    
+    # 테이블 데이터 추가 버튼
+    if st.button("📊 테이블 데이터 추가", type="primary"):
+        if test_table_input.strip():
+            try:
+                # 줄바꿈으로 행 분리
+                lines = test_table_input.strip().split('\n')
+                added_count = 0
+                
+                for line in lines:
+                    # 탭으로 컬럼 분리
+                    parts = line.split('\t')
+                    
+                    # 최소 필요 컬럼 수 확인 (NO, CATEGORY, DEPTH1, STEP, EXPECT RESULT)
+                    if len(parts) >= 5:
+                        # 부족한 컬럼은 빈 문자열로 채우기
+                        while len(parts) < 8:
+                            parts.append('')
+                        
+                        no = parts[0] if parts[0] else str(len(st.session_state.test_cases) + added_count + 1)
+                        category = parts[1]
+                        depth1 = parts[2]
+                        depth2 = parts[3] if len(parts) > 3 else ''
+                        depth3 = parts[4] if len(parts) > 4 else ''
+                        pre_condition = parts[5] if len(parts) > 5 else ''
+                        step = parts[6] if len(parts) > 6 else ''
+                        expect_result = parts[7] if len(parts) > 7 else ''
+                        
+                        # 필수 항목 확인
+                        if category and depth1:
+                            structured_test = {
+                                "id": len(st.session_state.test_cases) + added_count + 1,
+                                "category": category,
+                                "name": f"{category} - {depth1}" + (f" - {depth2}" if depth2 else ""),
+                                "description": f"NO: {no}\nCATEGORY: {category}\nDEPTH1: {depth1}\nDEPTH2: {depth2}\nDEPTH3: {depth3}\nPRE-CONDITION: {pre_condition}\nSTEP: {step}\nEXPECT RESULT: {expect_result}",
+                                "steps": [step] if step else [],
+                                "related_features": [x for x in [category, depth1, depth2, depth3] if x],
+                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "structured_data": {
+                                    "no": no,
+                                    "category": category,
+                                    "depth1": depth1,
+                                    "depth2": depth2,
+                                    "depth3": depth3,
+                                    "pre_condition": pre_condition,
+                                    "step": step,
+                                    "expect_result": expect_result
+                                }
+                            }
+                            st.session_state.test_cases.append(structured_test)
+                            added_count += 1
+                
+                if added_count > 0:
+                    save_test_cases_to_file(st.session_state.test_cases)
+                    st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다!")
+                    st.rerun()
+                else:
+                    st.error("유효한 테스트 케이스를 찾을 수 없습니다. 탭으로 구분된 데이터인지 확인해주세요.")
+                    
+            except Exception as e:
+                st.error(f"데이터 처리 중 오류가 발생했습니다: {str(e)}")
+                st.info("💡 Tip: 엑셀에서 데이터를 복사할 때 헤더는 제외하고 데이터 행만 복사하세요.")
         else:
-            st.error("테스트 케이스 내용을 입력해주세요.")
+            st.error("테스트 케이스 데이터를 입력해주세요.")
     
     # 샘플 데이터 로드
     if st.button("📝 샘플 테스트 케이스 로드"):
@@ -148,7 +237,6 @@ with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
                     "라인 로그인으로 회원가입 완료 테스트",
                     "애플 로그인으로 회원가입 완료 테스트",
                     "페이스북 로그인으로 회원가입 완료 테스트"
-                    "싸이월드 로그인 시도 -> 관리자 승인 필요 안내 출력 -> 관리자가 승인을 완료 -> 회원가입 완료 -> 싸이월드 로그인 시도 -> 로그인 성공"
 
                 ],
                 "related_features": ["회원가입", "이메일", "소셜로그인", "카카오", "구글", "페이스북", "네이버", "애플", "라인" "로그인", "주문", "가입", "구매"],
@@ -245,9 +333,36 @@ with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
     
     if st.session_state.test_cases:
         for tc in st.session_state.test_cases:
-            with st.expander(f"[{tc['category']}] {tc['name']}"):
-                st.write(f"**설명:** {tc['description']}")
-                st.write(f"**연관 기능:** {', '.join(tc['related_features'])}")
+            # 구조화된 데이터가 있는 경우 더 자세히 표시
+            if 'structured_data' in tc:
+                data = tc['structured_data']
+                header = f"[{data['category']}] {data['depth1']}"
+                if data.get('depth2'):
+                    header += f" > {data['depth2']}"
+            else:
+                header = f"[{tc['category']}] {tc['name']}"
+                
+            with st.expander(header):
+                if 'structured_data' in tc:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**NO:** {data.get('no', '')}")
+                        st.write(f"**CATEGORY:** {data.get('category', '')}")
+                        st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
+                        if data.get('depth2'):
+                            st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
+                        if data.get('depth3'):
+                            st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
+                    with col2:
+                        if data.get('pre_condition'):
+                            st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
+                        st.write(f"**STEP:** {data.get('step', '')}")
+                        st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
+                else:
+                    st.write(f"**설명:** {tc['description']}")
+                    if tc.get('related_features'):
+                        st.write(f"**연관 기능:** {', '.join(tc['related_features'])}")
+                        
                 if st.button(f"삭제", key=f"delete_{tc['id']}"):
                     st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
                     save_test_cases_to_file(st.session_state.test_cases)  # 파일로 저장
