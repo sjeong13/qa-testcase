@@ -509,7 +509,7 @@ with col1:
     else:
         search_query = st.text_area(
             "테스트하고 싶은 기능을 입력하세요. 설명을 상세하게 적을수록 AI는 더 정확한 케이스를 찾아서 추천해줍니다!",
-            placeholder="예: 상품별 구매평 연동 기능 QA. BO 쇼핑 > 구매평 > 구매평 연동에 해당 기능이 추가될 예정. 테스트 케이스 30개 이상 만들어봐",
+            placeholder="예: 상품별 구매평 연동 기능 QA./nBO 쇼핑 > 구매평 > 구매평 연동에 해당 기능이 추가될 예정./n테스트 케이스 30개 이상 만들어봐",
             height=150,
             key="search_input"
         )
