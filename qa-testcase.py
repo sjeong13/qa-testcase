@@ -449,48 +449,54 @@ with st.expander("➕ [QA팀 전용] 테스트 케이스 추가", expanded=False
     st.subheader(f"📋 저장된 테스트 케이스")
     st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
 
-    with st.expander("📊 카테고리별 통계", expanded=False):
-        # 통계만 표시
-
-    with st.expander("📝 전체 테스트 케이스 보기", expanded=False):
-        # 상세 목록
-    
     if st.session_state.test_cases:
+        # 카테고리별 통계
+        categories = {}
         for tc in st.session_state.test_cases:
-            # 구조화된 데이터가 있는 경우 더 자세히 표시
-            if 'structured_data' in tc:
-                data = tc['structured_data']
-                header = f"[{data['category']}] {data['depth1']}"
-                if data.get('depth2'):
-                    header += f" > {data['depth2']}"
-            else:
-                header = f"[{tc['category']}] {tc['name']}"
-                
-            with st.expander(header):
+            cat = tc.get('category', '미분류')
+            categories[cat] = categories.get(cat, 0) + 1
+    
+        with st.expander("📊 카테고리별 통계", expanded=False):
+            for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
+                st.write(f"**{cat}**: {count}개")
+    
+        # 상세 목록은 expander로 접기
+        with st.expander("📝 전체 테스트 케이스 보기", expanded=False):
+            for tc in st.session_state.test_cases:
+                # 구조화된 데이터가 있는 경우 더 자세히 표시
                 if 'structured_data' in tc:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**NO:** {data.get('no', '')}")
-                        st.write(f"**CATEGORY:** {data.get('category', '')}")
-                        st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
-                        if data.get('depth2'):
-                            st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
-                        if data.get('depth3'):
-                            st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
-                    with col2:
-                        if data.get('pre_condition'):
-                            st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
-                        st.write(f"**STEP:** {data.get('step', '')}")
-                        st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
+                    data = tc['structured_data']
+                    header = f"[{data['category']}] {data['depth1']}"
+                    if data.get('depth2'):
+                        header += f" > {data['depth2']}"
                 else:
-                    st.write(f"**설명:** {tc['description']}")
-                    if tc.get('related_features'):
-                        st.write(f"**연관 기능:** {', '.join(tc['related_features'])}")
+                    header = f"[{tc['category']}] {tc['name']}"
+                
+                with st.expander(header):
+                    if 'structured_data' in tc:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**NO:** {data.get('no', '')}")
+                            st.write(f"**CATEGORY:** {data.get('category', '')}")
+                            st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
+                            if data.get('depth2'):
+                                st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
+                            if data.get('depth3'):
+                                st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
+                        with col2:
+                            if data.get('pre_condition'):
+                                st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
+                            st.write(f"**STEP:** {data.get('step', '')}")
+                            st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
+                    else:
+                        st.write(f"**설명:** {tc['description']}")
+                        if tc.get('related_features'):
+                            st.write(f"**연관 기능:** {', '.join(tc['related_features'])}")
                         
-                if st.button(f"삭제", key=f"delete_{tc['id']}"):
-                    st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
-                    save_test_cases_to_file(st.session_state.test_cases)  # 파일로 저장
-                    st.rerun()
+                    if st.button(f"삭제", key=f"delete_{tc['id']}"):
+                        st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
+                        save_test_cases_to_file(st.session_state.test_cases)
+                        st.rerun()
 
 # 메인 영역
 col1, col2 = st.columns([2, 1])
@@ -504,7 +510,7 @@ with col1:
         search_query = st.text_area(
             "테스트하고 싶은 기능을 입력하세요. 설명을 상세하게 적을수록 AI는 더 정확한 케이스를 찾아서 추천해줍니다!",
             placeholder="예: 상품별 구매평 연동 기능 QA. BO 쇼핑 > 구매평 > 구매평 연동에 해당 기능이 추가될 예정. 테스트 케이스 30개 이상 만들어봐",
-            height=150
+            height=150,
             key="search_input"
         )
         
