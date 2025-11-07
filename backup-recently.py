@@ -4,7 +4,7 @@ from datetime import datetime
 import google.generativeai as genai
 import os
 import pandas as pd
-from io import BytesIO
+from io import BytesIO, StringIO
 
 # Excel 지원 확인
 try:
@@ -72,140 +72,256 @@ with st.sidebar:
 # 테스트 케이스 추가
 with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
     st.markdown("### 📝 테스트 케이스 입력")
-    st.info("💡 엑셀에서 복사한 데이터를 아래 텍스트 영역에 붙여넣으세요. 탭으로 구분된 데이터를 자동으로 인식합니다.")
+    st.info("💡 표에서 직접 입력하거나, 엑셀/구글시트에서 복사한 데이터를 붙여넣으세요.")
     
-    # 테이블 형식 예시 표시
-    st.markdown("**입력 형식 (탭으로 구분):**")
-    example_df = pd.DataFrame({
-        'NO': ['1', '2'],
-        'CATEGORY': ['회원가입', '주문'],
-        'DEPTH 1': ['공동구매', '주문하기'],
-        'DEPTH 2': ['브랜드 정보 입력', '회원 주문'],
-        'DEPTH 3': ['', ''],
-        'PRE-CONDITION': ['브랜드 정보 없음', '로그인 상태'],
-        'STEP': ['[공동구매 만들기] 버튼 클릭', '장바구니에서 주문하기 클릭'],
-        'EXPECT RESULT': ['브랜드 정보 입력 모달 출력', '주문서 페이지로 이동']
-    })
-    st.dataframe(example_df, use_container_width=True, height=120)
+    # 세션 스테이트에 편집용 데이터프레임 초기화
+    if 'edit_df' not in st.session_state:
+        st.session_state.edit_df = pd.DataFrame({
+            'NO': [''],
+            'CATEGORY': [''],
+            'DEPTH 1': [''],
+            'DEPTH 2': [''],
+            'DEPTH 3': [''],
+            'PRE-CONDITION': [''],
+            'STEP': [''],
+            'EXPECT RESULT': ['']
+        })
+    
+    # 데이터 에디터 (표 형식 입력)
+    st.markdown("**방법 1: 표에서 직접 입력/편집**")
+    
+    # 행 추가/삭제 버튼
+    col1, col2, col3 = st.columns([1, 1, 4])
+    with col1:
+        if st.button("➕ 행 추가"):
+            new_row = pd.DataFrame({
+                'NO': [''],
+                'CATEGORY': [''],
+                'DEPTH 1': [''],
+                'DEPTH 2': [''],
+                'DEPTH 3': [''],
+                'PRE-CONDITION': [''],
+                'STEP': [''],
+                'EXPECT RESULT': ['']
+            })
+            st.session_state.edit_df = pd.concat([st.session_state.edit_df, new_row], ignore_index=True)
+            st.rerun()
+    
+    with col2:
+        if st.button("🗑️ 모두 지우기"):
+            st.session_state.edit_df = pd.DataFrame({
+                'NO': [''],
+                'CATEGORY': [''],
+                'DEPTH 1': [''],
+                'DEPTH 2': [''],
+                'DEPTH 3': [''],
+                'PRE-CONDITION': [''],
+                'STEP': [''],
+                'EXPECT RESULT': ['']
+            })
+            st.rerun()
+    
+    # 데이터 에디터 표시
+    edited_df = st.data_editor(
+        st.session_state.edit_df,
+        use_container_width=True,
+        num_rows="dynamic",  # 행 추가/삭제 가능
+        hide_index=True,
+        column_config={
+            "NO": st.column_config.TextColumn(
+                "NO",
+                width="small",
+                help="번호"
+            ),
+            "CATEGORY": st.column_config.TextColumn(
+                "CATEGORY",
+                width="medium",
+                help="카테고리 (필수)"
+            ),
+            "DEPTH 1": st.column_config.TextColumn(
+                "DEPTH 1",
+                width="medium",
+                help="대분류 (필수)"
+            ),
+            "DEPTH 2": st.column_config.TextColumn(
+                "DEPTH 2",
+                width="medium",
+                help="중분류 (선택)"
+            ),
+            "DEPTH 3": st.column_config.TextColumn(
+                "DEPTH 3",
+                width="medium",
+                help="소분류 (선택)"
+            ),
+            "PRE-CONDITION": st.column_config.TextColumn(
+                "PRE-CONDITION",
+                width="large",
+                help="사전 조건 (선택)"
+            ),
+            "STEP": st.column_config.TextColumn(
+                "STEP",
+                width="large",
+                help="수행 단계"
+            ),
+            "EXPECT RESULT": st.column_config.TextColumn(
+                "EXPECT RESULT",
+                width="large",
+                help="예상 결과"
+            ),
+        },
+        key="test_case_editor"
+    )
+    
+    # 편집된 내용을 세션 스테이트에 저장
+    st.session_state.edit_df = edited_df
     
     st.markdown("---")
     
-    # 텍스트 영역에 붙여넣기
-    test_table_input = st.text_area(
-        "테스트 케이스 데이터 입력 (엑셀에서 복사 → 붙여넣기)",
-        height=200,
-        placeholder="""엑셀에서 복사한 데이터를 여기에 붙여넣으세요.
-예시:
-1	회원가입	공동구매	브랜드 정보 입력		브랜드 정보 없음	[공동구매 만들기] 버튼 클릭	브랜드 정보 입력 모달 출력
-2	주문	주문하기	회원 주문		로그인 상태	장바구니에서 주문하기 클릭	주문서 페이지로 이동""",
-        help="엑셀에서 NO, CATEGORY, DEPTH 1-3, PRE-CONDITION, STEP, EXPECT RESULT 컬럼의 데이터를 복사하여 붙여넣으세요."
-    )
+    # CSV 파일 업로드 옵션
+    st.markdown("**방법 2: CSV/Excel 파일 업로드**")
+    uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'])
     
-    # 또는 개별 입력 폼 (선택사항)
-    with st.expander("📋 개별 항목 입력 (선택사항)", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            no = st.number_input("NO", min_value=1, value=1)
-            category = st.text_input("CATEGORY", placeholder="예: 회원가입, 주문, 결제")
-            depth1 = st.text_input("DEPTH 1", placeholder="예: 공동구매")
-            depth2 = st.text_input("DEPTH 2 (선택)", placeholder="예: 브랜드 정보 입력")
-        with col2:
-            depth3 = st.text_input("DEPTH 3 (선택)", placeholder="")
-            pre_condition = st.text_input("PRE-CONDITION (선택)", placeholder="예: 브랜드 정보 없음")
-            step = st.text_area("STEP", placeholder="예: [공동구매 만들기] 버튼 클릭", height=68)
-            expect_result = st.text_area("EXPECT RESULT", placeholder="예: 브랜드 정보 입력 모달 출력", height=68)
-        
-        if st.button("➕ 개별 항목 추가"):
-            if category and depth1 and step and expect_result:
-                structured_test = {
-                    "id": len(st.session_state.test_cases) + 1,
-                    "category": category,
-                    "name": f"{category} - {depth1}",
-                    "description": f"NO: {no}\nCATEGORY: {category}\nDEPTH1: {depth1}\nDEPTH2: {depth2}\nDEPTH3: {depth3}\nPRE-CONDITION: {pre_condition}\nSTEP: {step}\nEXPECT RESULT: {expect_result}",
-                    "steps": [step],
-                    "related_features": [category, depth1, depth2, depth3].filter(None),
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "structured_data": {
-                        "no": no,
-                        "category": category,
-                        "depth1": depth1,
-                        "depth2": depth2,
-                        "depth3": depth3,
-                        "pre_condition": pre_condition,
-                        "step": step,
-                        "expect_result": expect_result
-                    }
-                }
-                st.session_state.test_cases.append(structured_test)
-                save_test_cases_to_file(st.session_state.test_cases)
-                st.success(f"✅ 테스트 케이스가 추가되었습니다!")
-                st.rerun()
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
             else:
-                st.error("필수 항목(CATEGORY, DEPTH 1, STEP, EXPECT RESULT)을 모두 입력해주세요.")
+                df = pd.read_excel(uploaded_file)
+            
+            # 컬럼명 확인 및 매핑
+            required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
+            
+            # 컬럼명이 다를 경우 매핑 시도
+            if not all(col in df.columns for col in required_columns):
+                st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
+                st.dataframe(df.head())
+            else:
+                st.session_state.edit_df = df[required_columns].fillna('')
+                st.success(f"✅ {len(df)}개 행이 로드되었습니다.")
+                st.rerun()
+                
+        except Exception as e:
+            st.error(f"파일 읽기 오류: {str(e)}")
     
-    # 테이블 데이터 추가 버튼
-    if st.button("📊 테이블 데이터 추가", type="primary"):
-        if test_table_input.strip():
-            try:
-                # 줄바꿈으로 행 분리
-                lines = test_table_input.strip().split('\n')
+    st.markdown("---")
+    
+    # 텍스트 영역 입력 (대안)
+    with st.expander("📋 텍스트로 붙여넣기 (대안)", expanded=False):
+        st.markdown("구글 시트/엑셀에서 복사한 텍스트를 여기 붙여넣으세요.")
+        
+        # CSV 형식 입력
+        csv_input = st.text_area(
+            "CSV 형식으로 입력",
+            height=200,
+            placeholder="""NO,CATEGORY,DEPTH 1,DEPTH 2,DEPTH 3,PRE-CONDITION,STEP,EXPECT RESULT
+1,회원가입,공동구매,브랜드 정보 입력,,브랜드 정보 없음,[공동구매 만들기] 버튼 클릭,브랜드 정보 입력 모달 출력
+2,주문,주문하기,회원 주문,,로그인 상태,장바구니에서 주문하기 클릭,주문서 페이지로 이동"""
+        )
+        
+        if st.button("CSV 데이터 로드"):
+            if csv_input.strip():
+                try:
+                    # StringIO를 사용하여 CSV로 파싱
+                    from io import StringIO
+                    csv_data = StringIO(csv_input)
+                    df = pd.read_csv(csv_data)
+                    
+                    # 세션 스테이트에 저장
+                    st.session_state.edit_df = df.fillna('')
+                    st.success(f"✅ {len(df)}개 행이 로드되었습니다.")
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"CSV 파싱 오류: {str(e)}")
+    
+    # 데이터 추가 버튼
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 테스트 케이스 저장", type="primary", disabled=(len(edited_df) == 0)):
+            if len(edited_df) > 0:
                 added_count = 0
                 
-                for line in lines:
-                    # 탭으로 컬럼 분리
-                    parts = line.split('\t')
+                for index, row in edited_df.iterrows():
+                    # 빈 행 스킵
+                    if pd.isna(row['CATEGORY']) or row['CATEGORY'] == '' or pd.isna(row['DEPTH 1']) or row['DEPTH 1'] == '':
+                        continue
                     
-                    # 최소 필요 컬럼 수 확인 (NO, CATEGORY, DEPTH1, STEP, EXPECT RESULT)
-                    if len(parts) >= 5:
-                        # 부족한 컬럼은 빈 문자열로 채우기
-                        while len(parts) < 8:
-                            parts.append('')
-                        
-                        no = parts[0] if parts[0] else str(len(st.session_state.test_cases) + added_count + 1)
-                        category = parts[1]
-                        depth1 = parts[2]
-                        depth2 = parts[3] if len(parts) > 3 else ''
-                        depth3 = parts[4] if len(parts) > 4 else ''
-                        pre_condition = parts[5] if len(parts) > 5 else ''
-                        step = parts[6] if len(parts) > 6 else ''
-                        expect_result = parts[7] if len(parts) > 7 else ''
-                        
-                        # 필수 항목 확인
-                        if category and depth1:
-                            structured_test = {
-                                "id": len(st.session_state.test_cases) + added_count + 1,
-                                "category": category,
-                                "name": f"{category} - {depth1}" + (f" - {depth2}" if depth2 else ""),
-                                "description": f"NO: {no}\nCATEGORY: {category}\nDEPTH1: {depth1}\nDEPTH2: {depth2}\nDEPTH3: {depth3}\nPRE-CONDITION: {pre_condition}\nSTEP: {step}\nEXPECT RESULT: {expect_result}",
-                                "steps": [step] if step else [],
-                                "related_features": [x for x in [category, depth1, depth2, depth3] if x],
-                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "structured_data": {
-                                    "no": no,
-                                    "category": category,
-                                    "depth1": depth1,
-                                    "depth2": depth2,
-                                    "depth3": depth3,
-                                    "pre_condition": pre_condition,
-                                    "step": step,
-                                    "expect_result": expect_result
-                                }
-                            }
-                            st.session_state.test_cases.append(structured_test)
-                            added_count += 1
+                    # NO가 비어있으면 자동 생성
+                    no = str(row['NO']) if row['NO'] and str(row['NO']).strip() else str(len(st.session_state.test_cases) + added_count + 1)
+                    
+                    structured_test = {
+                        "id": len(st.session_state.test_cases) + added_count + 1,
+                        "category": str(row['CATEGORY']),
+                        "name": f"{row['CATEGORY']} - {row['DEPTH 1']}" + (f" - {row['DEPTH 2']}" if row['DEPTH 2'] else ""),
+                        "description": f"NO: {no}\nCATEGORY: {row['CATEGORY']}\nDEPTH1: {row['DEPTH 1']}\nDEPTH2: {row.get('DEPTH 2', '')}\nDEPTH3: {row.get('DEPTH 3', '')}\nPRE-CONDITION: {row.get('PRE-CONDITION', '')}\nSTEP: {row.get('STEP', '')}\nEXPECT RESULT: {row.get('EXPECT RESULT', '')}",
+                        "steps": [str(row.get('STEP', ''))] if row.get('STEP', '') else [],
+                        "related_features": [x for x in [str(row['CATEGORY']), str(row['DEPTH 1']), str(row.get('DEPTH 2', '')), str(row.get('DEPTH 3', ''))] if x],
+                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "structured_data": {
+                            "no": no,
+                            "category": str(row['CATEGORY']),
+                            "depth1": str(row['DEPTH 1']),
+                            "depth2": str(row.get('DEPTH 2', '')),
+                            "depth3": str(row.get('DEPTH 3', '')),
+                            "pre_condition": str(row.get('PRE-CONDITION', '')),
+                            "step": str(row.get('STEP', '')),
+                            "expect_result": str(row.get('EXPECT RESULT', ''))
+                        }
+                    }
+                    st.session_state.test_cases.append(structured_test)
+                    added_count += 1
                 
                 if added_count > 0:
                     save_test_cases_to_file(st.session_state.test_cases)
+                    # 테이블 초기화
+                    st.session_state.edit_df = pd.DataFrame({
+                        'NO': [''],
+                        'CATEGORY': [''],
+                        'DEPTH 1': [''],
+                        'DEPTH 2': [''],
+                        'DEPTH 3': [''],
+                        'PRE-CONDITION': [''],
+                        'STEP': [''],
+                        'EXPECT RESULT': ['']
+                    })
                     st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다!")
                     st.rerun()
                 else:
-                    st.error("유효한 테스트 케이스를 찾을 수 없습니다. 탭으로 구분된 데이터인지 확인해주세요.")
-                    
-            except Exception as e:
-                st.error(f"데이터 처리 중 오류가 발생했습니다: {str(e)}")
-                st.info("💡 Tip: 엑셀에서 데이터를 복사할 때 헤더는 제외하고 데이터 행만 복사하세요.")
+                    st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
+    
+    with col2:
+        # 샘플 다운로드 버튼
+        sample_df = pd.DataFrame({
+            'NO': ['1', '2', '3'],
+            'CATEGORY': ['1. UI 및 진입 경로', '2. 공동구매 메뉴', '3. 주문'],
+            'DEPTH 1': ['(BO) 쇼핑 > 상품목록', '공동구매', '주문하기'],
+            'DEPTH 2': ['상품 등록', '브랜드 정보 입력', '회원 주문'],
+            'DEPTH 3': ['PC', '', ''],
+            'PRE-CONDITION': ['', '브랜드 정보 없음', '로그인 상태'],
+            'STEP': ['1. 상품 목록 - 상품 등록 버튼을 클릭합니다.\n2. 상품 등록 페이지 내 가로 해상도가 1024px 초과로 조정합니다.', '[공동구매 만들기] 버튼 클릭', '장바구니에서 주문하기 클릭'],
+            'EXPECT RESULT': ['1. 신.상품등록 페이지가 PC UI로 출력되는지 확인합니다.', '브랜드 정보 입력 모달 출력', '주문서 페이지로 이동']
+        })
+        
+        if EXCEL_AVAILABLE:
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                sample_df.to_excel(writer, index=False, sheet_name='샘플')
+            output.seek(0)
+            
+            st.download_button(
+                label="📥 샘플 Excel 다운로드",
+                data=output,
+                file_name="test_case_sample.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         else:
-            st.error("테스트 케이스 데이터를 입력해주세요.")
+            csv = sample_df.to_csv(index=False, encoding='utf-8-sig')
+            st.download_button(
+                label="📥 샘플 CSV 다운로드",
+                data=csv,
+                file_name="test_case_sample.csv",
+                mime="text/csv"
+            )
     
     # 샘플 데이터 로드
     if st.button("📝 샘플 테스트 케이스 로드"):
