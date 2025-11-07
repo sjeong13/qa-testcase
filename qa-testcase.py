@@ -4,7 +4,7 @@ from datetime import datetime
 import google.generativeai as genai
 import os
 import pandas as pd
-from io import BytesIO, StringIO
+from io import BytesIO
 
 # Excel 지원 확인
 try:
@@ -71,257 +71,52 @@ with st.sidebar:
     
 # 테스트 케이스 추가
 with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
-    st.markdown("### 📝 테스트 케이스 입력")
-    st.info("💡 표에서 직접 입력하거나, 엑셀/구글시트에서 복사한 데이터를 붙여넣으세요.")
+    st.markdown("**자유 형식으로 작성하세요!**")
+    st.caption("예: # 주문 취소 테스트\n- 로그인 후 주문 내역 확인\n- 취소 가능한 주문 선택...")
     
-    # 세션 스테이트에 편집용 데이터프레임 초기화
-    if 'edit_df' not in st.session_state:
-        st.session_state.edit_df = pd.DataFrame({
-            'NO': [''],
-            'CATEGORY': [''],
-            'DEPTH 1': [''],
-            'DEPTH 2': [''],
-            'DEPTH 3': [''],
-            'PRE-CONDITION': [''],
-            'STEP': [''],
-            'EXPECT RESULT': ['']
-        })
-    
-    # 데이터 에디터 (표 형식 입력)
-    st.markdown("**방법 1: 표에서 직접 입력/편집**")
-    
-    # 행 추가/삭제 버튼
-    col1, col2, col3 = st.columns([1, 1, 4])
-    with col1:
-        if st.button("➕ 행 추가"):
-            new_row = pd.DataFrame({
-                'NO': [''],
-                'CATEGORY': [''],
-                'DEPTH 1': [''],
-                'DEPTH 2': [''],
-                'DEPTH 3': [''],
-                'PRE-CONDITION': [''],
-                'STEP': [''],
-                'EXPECT RESULT': ['']
-            })
-            st.session_state.edit_df = pd.concat([st.session_state.edit_df, new_row], ignore_index=True)
-            st.rerun()
-    
-    with col2:
-        if st.button("🗑️ 모두 지우기"):
-            st.session_state.edit_df = pd.DataFrame({
-                'NO': [''],
-                'CATEGORY': [''],
-                'DEPTH 1': [''],
-                'DEPTH 2': [''],
-                'DEPTH 3': [''],
-                'PRE-CONDITION': [''],
-                'STEP': [''],
-                'EXPECT RESULT': ['']
-            })
-            st.rerun()
-    
-    # 데이터 에디터 표시
-    edited_df = st.data_editor(
-        st.session_state.edit_df,
-        use_container_width=True,
-        num_rows="dynamic",  # 행 추가/삭제 가능
-        hide_index=True,
-        column_config={
-            "NO": st.column_config.TextColumn(
-                "NO",
-                width="small",
-                help="번호"
-            ),
-            "CATEGORY": st.column_config.TextColumn(
-                "CATEGORY",
-                width="medium",
-                help="카테고리 (필수)"
-            ),
-            "DEPTH 1": st.column_config.TextColumn(
-                "DEPTH 1",
-                width="medium",
-                help="대분류 (필수)"
-            ),
-            "DEPTH 2": st.column_config.TextColumn(
-                "DEPTH 2",
-                width="medium",
-                help="중분류 (선택)"
-            ),
-            "DEPTH 3": st.column_config.TextColumn(
-                "DEPTH 3",
-                width="medium",
-                help="소분류 (선택)"
-            ),
-            "PRE-CONDITION": st.column_config.TextColumn(
-                "PRE-CONDITION",
-                width="large",
-                help="사전 조건 (선택)"
-            ),
-            "STEP": st.column_config.TextColumn(
-                "STEP",
-                width="large",
-                help="수행 단계"
-            ),
-            "EXPECT RESULT": st.column_config.TextColumn(
-                "EXPECT RESULT",
-                width="large",
-                help="예상 결과"
-            ),
-        },
-        key="test_case_editor"
+    test_content = st.text_area(
+        "테스트 케이스 내용",
+        height=300,
+        placeholder="""예시:
+# 카테고리: 주문
+
+## 테스트: 회원 주문 취소 프로세스
+
+**목적**: 주문 완료 후 취소가 정상적으로 처리되는지 확인
+
+**테스트 순서**:
+1. 로그인 상태 확인
+2. 마이페이지 > 주문내역 이동
+3. 최근 주문 중 취소 가능한 주문 선택
+4. 취소 사유 선택
+5. 주문 취소 버튼 클릭
+6. 취소 완료 확인
+
+**연관 기능**: 주문, 회원, 마이페이지, 결제환불
+
+**추가 확인사항**:
+- 취소 후 포인트/쿠폰 복구 확인
+- 결제 취소 알림톡 발송 확인
+"""
     )
-    
-    # 편집된 내용을 세션 스테이트에 저장
-    st.session_state.edit_df = edited_df
-    
-    st.markdown("---")
-    
-    # CSV 파일 업로드 옵션
-    st.markdown("**방법 2: CSV/Excel 파일 업로드**")
-    uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'])
-    
-    if uploaded_file is not None:
-        try:
-            if uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file)
-            else:
-                df = pd.read_excel(uploaded_file)
-            
-            # 컬럼명 확인 및 매핑
-            required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
-            
-            # 컬럼명이 다를 경우 매핑 시도
-            if not all(col in df.columns for col in required_columns):
-                st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
-                st.dataframe(df.head())
-            else:
-                st.session_state.edit_df = df[required_columns].fillna('')
-                st.success(f"✅ {len(df)}개 행이 로드되었습니다.")
-                st.rerun()
-                
-        except Exception as e:
-            st.error(f"파일 읽기 오류: {str(e)}")
-    
-    st.markdown("---")
-    
-    # 텍스트 영역 입력 (대안)
-    with st.expander("📋 텍스트로 붙여넣기 (대안)", expanded=False):
-        st.markdown("구글 시트/엑셀에서 복사한 텍스트를 여기 붙여넣으세요.")
         
-        # CSV 형식 입력
-        csv_input = st.text_area(
-            "CSV 형식으로 입력",
-            height=200,
-            placeholder="""NO,CATEGORY,DEPTH 1,DEPTH 2,DEPTH 3,PRE-CONDITION,STEP,EXPECT RESULT
-1,회원가입,공동구매,브랜드 정보 입력,,브랜드 정보 없음,[공동구매 만들기] 버튼 클릭,브랜드 정보 입력 모달 출력
-2,주문,주문하기,회원 주문,,로그인 상태,장바구니에서 주문하기 클릭,주문서 페이지로 이동"""
-        )
-        
-        if st.button("CSV 데이터 로드"):
-            if csv_input.strip():
-                try:
-                    # StringIO를 사용하여 CSV로 파싱
-                    from io import StringIO
-                    csv_data = StringIO(csv_input)
-                    df = pd.read_csv(csv_data)
-                    
-                    # 세션 스테이트에 저장
-                    st.session_state.edit_df = df.fillna('')
-                    st.success(f"✅ {len(df)}개 행이 로드되었습니다.")
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"CSV 파싱 오류: {str(e)}")
-    
-    # 데이터 추가 버튼
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 테스트 케이스 저장", type="primary", disabled=(len(edited_df) == 0)):
-            if len(edited_df) > 0:
-                added_count = 0
-                
-                for index, row in edited_df.iterrows():
-                    # 빈 행 스킵
-                    if pd.isna(row['CATEGORY']) or row['CATEGORY'] == '' or pd.isna(row['DEPTH 1']) or row['DEPTH 1'] == '':
-                        continue
-                    
-                    # NO가 비어있으면 자동 생성
-                    no = str(row['NO']) if row['NO'] and str(row['NO']).strip() else str(len(st.session_state.test_cases) + added_count + 1)
-                    
-                    structured_test = {
-                        "id": len(st.session_state.test_cases) + added_count + 1,
-                        "category": str(row['CATEGORY']),
-                        "name": f"{row['CATEGORY']} - {row['DEPTH 1']}" + (f" - {row['DEPTH 2']}" if row['DEPTH 2'] else ""),
-                        "description": f"NO: {no}\nCATEGORY: {row['CATEGORY']}\nDEPTH1: {row['DEPTH 1']}\nDEPTH2: {row.get('DEPTH 2', '')}\nDEPTH3: {row.get('DEPTH 3', '')}\nPRE-CONDITION: {row.get('PRE-CONDITION', '')}\nSTEP: {row.get('STEP', '')}\nEXPECT RESULT: {row.get('EXPECT RESULT', '')}",
-                        "steps": [str(row.get('STEP', ''))] if row.get('STEP', '') else [],
-                        "related_features": [x for x in [str(row['CATEGORY']), str(row['DEPTH 1']), str(row.get('DEPTH 2', '')), str(row.get('DEPTH 3', ''))] if x],
-                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "structured_data": {
-                            "no": no,
-                            "category": str(row['CATEGORY']),
-                            "depth1": str(row['DEPTH 1']),
-                            "depth2": str(row.get('DEPTH 2', '')),
-                            "depth3": str(row.get('DEPTH 3', '')),
-                            "pre_condition": str(row.get('PRE-CONDITION', '')),
-                            "step": str(row.get('STEP', '')),
-                            "expect_result": str(row.get('EXPECT RESULT', ''))
-                        }
-                    }
-                    st.session_state.test_cases.append(structured_test)
-                    added_count += 1
-                
-                if added_count > 0:
-                    save_test_cases_to_file(st.session_state.test_cases)
-                    # 테이블 초기화
-                    st.session_state.edit_df = pd.DataFrame({
-                        'NO': [''],
-                        'CATEGORY': [''],
-                        'DEPTH 1': [''],
-                        'DEPTH 2': [''],
-                        'DEPTH 3': [''],
-                        'PRE-CONDITION': [''],
-                        'STEP': [''],
-                        'EXPECT RESULT': ['']
-                    })
-                    st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다!")
-                    st.rerun()
-                else:
-                    st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
-    
-    with col2:
-        # 샘플 다운로드 버튼
-        sample_df = pd.DataFrame({
-            'NO': ['1', '2', '3'],
-            'CATEGORY': ['1. UI 및 진입 경로', '2. 공동구매 메뉴', '3. 주문'],
-            'DEPTH 1': ['(BO) 쇼핑 > 상품목록', '공동구매', '주문하기'],
-            'DEPTH 2': ['상품 등록', '브랜드 정보 입력', '회원 주문'],
-            'DEPTH 3': ['PC', '', ''],
-            'PRE-CONDITION': ['', '브랜드 정보 없음', '로그인 상태'],
-            'STEP': ['1. 상품 목록 - 상품 등록 버튼을 클릭합니다.\n2. 상품 등록 페이지 내 가로 해상도가 1024px 초과로 조정합니다.', '[공동구매 만들기] 버튼 클릭', '장바구니에서 주문하기 클릭'],
-            'EXPECT RESULT': ['1. 신.상품등록 페이지가 PC UI로 출력되는지 확인합니다.', '브랜드 정보 입력 모달 출력', '주문서 페이지로 이동']
-        })
-        
-        if EXCEL_AVAILABLE:
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                sample_df.to_excel(writer, index=False, sheet_name='샘플')
-            output.seek(0)
-            
-            st.download_button(
-                label="📥 샘플 Excel 다운로드",
-                data=output,
-                file_name="test_case_sample.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+    if st.button("테스트 케이스 추가"):
+        if test_content.strip():
+            new_test_case = {
+                "id": len(st.session_state.test_cases) + 1,
+                "category": "자유형식",  # 나중에 AI가 분석할 수 있음
+                "name": f"테스트 케이스 {len(st.session_state.test_cases) + 1}",
+                "description": test_content.strip(),  # 전체 내용을 여기에
+                "steps": [],  # 빈 리스트
+                "related_features": [],  # 빈 리스트
+                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            st.session_state.test_cases.append(new_test_case)
+            save_test_cases_to_file(st.session_state.test_cases)
+            st.success(f"✅ 테스트 케이스가 추가되었습니다!")
+            st.rerun()
         else:
-            csv = sample_df.to_csv(index=False, encoding='utf-8-sig')
-            st.download_button(
-                label="📥 샘플 CSV 다운로드",
-                data=csv,
-                file_name="test_case_sample.csv",
-                mime="text/csv"
-            )
+            st.error("테스트 케이스 내용을 입력해주세요.")
     
     # 샘플 데이터 로드
     if st.button("📝 샘플 테스트 케이스 로드"):
@@ -449,36 +244,9 @@ with st.expander("➕ 새 테스트 케이스 추가", expanded=False):
     
     if st.session_state.test_cases:
         for tc in st.session_state.test_cases:
-            # 구조화된 데이터가 있는 경우 더 자세히 표시
-            if 'structured_data' in tc:
-                data = tc['structured_data']
-                header = f"[{data['category']}] {data['depth1']}"
-                if data.get('depth2'):
-                    header += f" > {data['depth2']}"
-            else:
-                header = f"[{tc['category']}] {tc['name']}"
-                
-            with st.expander(header):
-                if 'structured_data' in tc:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**NO:** {data.get('no', '')}")
-                        st.write(f"**CATEGORY:** {data.get('category', '')}")
-                        st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
-                        if data.get('depth2'):
-                            st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
-                        if data.get('depth3'):
-                            st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
-                    with col2:
-                        if data.get('pre_condition'):
-                            st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
-                        st.write(f"**STEP:** {data.get('step', '')}")
-                        st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
-                else:
-                    st.write(f"**설명:** {tc['description']}")
-                    if tc.get('related_features'):
-                        st.write(f"**연관 기능:** {', '.join(tc['related_features'])}")
-                        
+            with st.expander(f"[{tc['category']}] {tc['name']}"):
+                st.write(f"**설명:** {tc['description']}")
+                st.write(f"**연관 기능:** {', '.join(tc['related_features'])}")
                 if st.button(f"삭제", key=f"delete_{tc['id']}"):
                     st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
                     save_test_cases_to_file(st.session_state.test_cases)  # 파일로 저장
