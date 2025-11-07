@@ -62,12 +62,12 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("AI 기반 QA Testcase Assistant (일명 테케봇!)")
+st.title("👾 테케봇 (QA Test Case Bot)")
 st.markdown("---")
 
 # 사이드바 - 테스트 케이스 관리
 with st.sidebar:
-    st.header("👾 테스트 케이스 관리")
+    st.header("👾 WELCOME")
     
 # 테스트 케이스 추가
 with st.expander("➕ [QA팀 전용] 테스트 케이스 추가", expanded=False):
