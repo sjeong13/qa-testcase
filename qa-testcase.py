@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 import google.generativeai as genai
 import os
+import pandas as pd
 
 # Google Gemini API 클라이언트 초기화
 @st.cache_resource
@@ -252,7 +253,7 @@ with col1:
     else:
         search_query = st.text_input(
             "테스트하고 싶은 기능을 입력하세요",
-            placeholder="예: 주문 QA, 로그인 테스트, 결제 검증",
+            placeholder="예: 주문 QA, 로그인 테스트, 결제 검증, 공동구매 메뉴",
             key="search_input"
         )
         
@@ -295,29 +296,49 @@ IO, BO, FO는 서로 연관도 많이 되어 있고, 얽혀있어.
 
 {test_cases_str}
 
+[테스트 케이스 표 양식]
+반드시 다음 양식을 따라서 테스트 케이스를 작성해줘:
+| NO | CATEGORY | DEPTH 1 | DEPTH 2 | DEPTH 3 | PRE-CONDITION | STEP | EXPECT RESULT |
+|----|----------|---------|---------|---------|---------------|------|---------------|
+| 1  | 카테고리명 | 대분류 | 중분류(선택) | 소분류(선택) | 사전조건(선택) | 수행 단계 | 예상 결과 |
+
+예시:
+- CATEGORY: 공동구매 메뉴, LNB 메뉴 등
+- DEPTH 1: 공동구매, 상단 헤더 등  
+- DEPTH 2: 공동구매 브랜드 정보 모달, 공동구매 만들기 등
+- DEPTH 3: 더 세부적인 기능
+- PRE-CONDITION: 브랜드 정보 없음 + 캠페인 없음, 파트너 하위 사이트 등
+- STEP: 공동구매 메뉴 확인, [공동구매 만들기] 버튼 클릭 등
+- EXPECT RESULT: 공동구매 메뉴 노출 확인, 브랜드 정보 저장 완료 모달 출력 등
+
 사용자의 요청을 분석하고, 다음을 수행할 것:
 
 1. 사용자가 테스트하려는 기능과 **직접 관련된** 테스트 케이스를 찾을 것
 2. 그 기능이 작동하기 위해 **의존하는 다른 기능**들을 추론할 것
 3. 의존하는 기능들의 테스트 케이스도 포함할 것
 4. 논리적인 순서로 테스트 체크리스트를 만들 것
-5. 다음 테스트 케이스 양식을 따를 것
-    - CATEGORY
-    - DEPTH 1
-    - DEPTH 2(선택사항)
-    - DEPTH 3(선택사항)
-    - PRE-CONDITION(선택사항)
-    - STEP
-    - EXPECT RESULT
+5. **반드시 위 표 양식으로 신규 테스트 케이스들을 생성할 것**
 
 응답 형식:
 ```json
 {{
   "reasoning": "왜 이런 테스트 케이스들이 필요한지 단계별 추론 과정 (한국어로 설명)",
-  "recommended_test_cases": [
+  "existing_test_cases": [
     {{
       "id": 테스트케이스ID,
-      "reason": "이 테스트가 왜 필요한지 간단한 설명"
+      "reason": "이 기존 테스트가 왜 필요한지 간단한 설명"
+    }}
+  ],
+  "new_test_cases": [
+    {{
+      "no": 번호,
+      "category": "카테고리",
+      "depth1": "대분류",
+      "depth2": "중분류 또는 빈 문자열",
+      "depth3": "소분류 또는 빈 문자열",
+      "pre_condition": "사전조건 또는 빈 문자열",
+      "step": "수행 단계",
+      "expect_result": "예상 결과"
     }}
   ],
   "test_order": "추천하는 테스트 순서 설명",
@@ -325,7 +346,10 @@ IO, BO, FO는 서로 연관도 많이 되어 있고, 얽혀있어.
 }}
 ```
 
-중요: 반드시 JSON 형식으로만 응답하세요."""
+중요: 
+1. 반드시 JSON 형식으로만 응답하세요.
+2. new_test_cases는 반드시 표 양식에 맞춰 작성하세요.
+3. 기존 테스트 케이스와 새로 생성한 테스트 케이스를 구분해서 제공하세요."""
 
                         try:
                             response = client.generate_content(prompt)
@@ -353,23 +377,66 @@ IO, BO, FO는 서로 연관도 많이 되어 있고, 얽혀있어.
                             st.markdown("### 🧠 AI의 사고 과정")
                             st.info(ai_response.get("reasoning", "추론 과정 없음"))
                             
-                            # 추천된 테스트 케이스
-                            st.markdown("### 📝 추천 테스트 체크리스트")
-                            
-                            recommended_ids = [tc["id"] for tc in ai_response.get("recommended_test_cases", [])]
-                            recommended_cases = [tc for tc in st.session_state.test_cases if tc["id"] in recommended_ids]
-                            
-                            if recommended_cases:
-                                for i, rec in enumerate(ai_response.get("recommended_test_cases", []), 1):
+                            # 기존 테스트 케이스 추천
+                            if ai_response.get("existing_test_cases"):
+                                st.markdown("### 📝 기존 테스트 케이스 활용")
+                                
+                                for i, rec in enumerate(ai_response.get("existing_test_cases", []), 1):
                                     test_case = next((tc for tc in st.session_state.test_cases if tc["id"] == rec["id"]), None)
                                     
                                     if test_case:
-                                        with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=True):
+                                        with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=False):
                                             st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
                                             st.markdown(f"**설명:** {test_case['description']}")
                                             st.markdown("**테스트 단계:**")
                                             for step_num, step in enumerate(test_case['steps'], 1):
                                                 st.markdown(f"{step_num}. {step}")
+                            
+                            # 새로 생성된 테스트 케이스 (표 형식)
+                            if ai_response.get("new_test_cases"):
+                                st.markdown("### 🆕 AI가 생성한 신규 테스트 케이스")
+                                
+                                # 데이터프레임 생성
+                                df_data = []
+                                for tc in ai_response.get("new_test_cases", []):
+                                    df_data.append({
+                                        "NO": tc.get("no", ""),
+                                        "CATEGORY": tc.get("category", ""),
+                                        "DEPTH 1": tc.get("depth1", ""),
+                                        "DEPTH 2": tc.get("depth2", ""),
+                                        "DEPTH 3": tc.get("depth3", ""),
+                                        "PRE-CONDITION": tc.get("pre_condition", ""),
+                                        "STEP": tc.get("step", ""),
+                                        "EXPECT RESULT": tc.get("expect_result", "")
+                                    })
+                                
+                                df = pd.DataFrame(df_data)
+                                
+                                # 스타일링된 표로 표시
+                                st.dataframe(
+                                    df,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    column_config={
+                                        "NO": st.column_config.NumberColumn(width="small"),
+                                        "CATEGORY": st.column_config.TextColumn(width="medium"),
+                                        "DEPTH 1": st.column_config.TextColumn(width="medium"),
+                                        "DEPTH 2": st.column_config.TextColumn(width="medium"),
+                                        "DEPTH 3": st.column_config.TextColumn(width="medium"),
+                                        "PRE-CONDITION": st.column_config.TextColumn(width="large"),
+                                        "STEP": st.column_config.TextColumn(width="large"),
+                                        "EXPECT RESULT": st.column_config.TextColumn(width="large")
+                                    }
+                                )
+                                
+                                # CSV 다운로드 버튼
+                                csv = df.to_csv(index=False, encoding='utf-8-sig')
+                                st.download_button(
+                                    label="📥 테스트 케이스 CSV로 다운로드",
+                                    data=csv,
+                                    file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                    mime="text/csv"
+                                )
                             
                             # 테스트 순서 설명
                             if ai_response.get("test_order"):
@@ -378,7 +445,7 @@ IO, BO, FO는 서로 연관도 많이 되어 있고, 얽혀있어.
                             
                             # 추가 제안
                             if ai_response.get("additional_suggestions"):
-                                st.markdown("### 💡 추가 제안")
+                                st.markdown("### 💡 추가 제안 (Edge Cases)")
                                 st.warning(ai_response["additional_suggestions"])
                             
                         except Exception as e:
@@ -394,8 +461,10 @@ with col2:
             with st.expander(f"{history['timestamp'][:10]} - {history['query']}", expanded=(i==1)):
                 st.write(f"**검색어:** {history['query']}")
                 st.write(f"**시간:** {history['timestamp']}")
-                rec_count = len(history['response'].get('recommended_test_cases', []))
-                st.write(f"**추천된 테스트:** {rec_count}개")
+                existing_count = len(history['response'].get('existing_test_cases', []))
+                new_count = len(history['response'].get('new_test_cases', []))
+                st.write(f"**기존 테스트:** {existing_count}개")
+                st.write(f"**신규 생성:** {new_count}개")
     else:
         st.info("아직 검색 히스토리가 없습니다.")
 
@@ -404,13 +473,14 @@ st.markdown("---")
 st.markdown("""
 ### 💡 사용 방법
 1. 테스트 케이스를 추가하거나 샘플 데이터를 로드하세요
-2. **검색창**에 테스트하고 싶은 기능을 입력하세요 (예: "주문 QA", "로그인 테스트")
-3. **AI가 자동으로** 필요한 테스트 케이스를 추론하고 추천합니다
-4. 연관된 기능의 테스트도 자동으로 포함됩니다
+2. **검색창**에 테스트하고 싶은 기능을 입력하세요 (예: "주문 QA", "로그인 테스트", "공동구매 메뉴")
+3. **AI가 자동으로** 기존 테스트 케이스를 활용하고 신규 테스트 케이스를 생성합니다
+4. 생성된 테스트 케이스는 표 형식으로 확인하고 CSV로 다운로드할 수 있습니다
 
 ### 🎯 주요 기능
 - ✅ 테스트 케이스 학습 및 저장
 - 🤖 AI 기반 연관 테스트 케이스 추론
-- 📋 자동 체크리스트 생성
+- 📋 표 형식의 구조화된 테스트 케이스 생성
 - 🔄 의존성 기반 테스트 순서 추천
+- 📥 CSV 파일로 내보내기 기능
 """)
