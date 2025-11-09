@@ -249,7 +249,7 @@ with st.sidebar:
                         st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
                         
     # 샘플 데이터 로드
-    if st.button("📝 샘플 테스트 케이스 로드"):
+    if st.button("📋 샘플 테스트 케이스 로드"):
         sample_cases = [
             {
                 "id": 1,
@@ -469,13 +469,13 @@ with col1:
         st.warning("⚠️ 먼저 테스트 케이스나 기획 문서를 추가해주세요.")
     else:
         search_query = st.text_area(
-            "테스트하고 싶은 기능을 입력하세요. 설명을 상세하게 적을수록 AI는 더 정확한 케이스를 찾아서 추천해줍니다!",
-            placeholder="예: 상품별 구매평 연동 기능 QA\nBO 쇼핑 > 구매평 > 구매평 연동에 해당 기능이 추가될 예정\n테스트 케이스 30개 이상 만들어봐\n\n다른 예: 공동구매 만들기 버튼 클릭 시 브랜드 정보 입력 모달이 정상 출력되는지 확인하고 싶어",
+            "테스트하고 싶은 기능을 입력하세요.\n설명을 상세하게 적을수록 AI는 더 정확한 케이스를 찾아서 추천해줍니다!",
+            placeholder="예: 상품별 구매평 연동 기능 QA\nBO 쇼핑 > 구매평 > 구매평 연동에 해당 기능이 추가될 예정\n테스트 케이스 30개 이상 만들어봐",
             height=150,
             key="search_input"
         )
         
-        if st.button("🤖 AI 추천 받기", type="primary"):
+        if st.button("AI 추천 받기", type="primary"):
             if search_query:
                 with st.spinner("AI가 연관된 테스트 케이스를 찾고 있습니다..."):
                     client = get_gemini_client()
@@ -675,7 +675,7 @@ with col2:
         for i, history in enumerate(reversed(st.session_state.search_history[-5:]), 1):
             with st.expander(f"{history['timestamp'][:10]} - {history['query'][:20]}...", expanded=(i==1)):
                 st.write(f"**검색어:** {history['query']}")
-                st.write(f"**시간:** {history['timestamp']}")
+                st.write(f"**시간(UTC):** {history['timestamp']}")
                 existing_count = len(history['response'].get('existing_test_cases', []))
                 new_count = len(history['response'].get('new_test_cases', []))
                 st.write(f"**기존 테스트:** {existing_count}개")
@@ -687,21 +687,16 @@ with col2:
 st.markdown("---")
 st.markdown("""
 ### 💡 사용 방법
-1. **학습 데이터 추가** (사이드바)
-   - 📋 테스트 케이스: 기존 테스트 케이스를 표/CSV/Excel로 추가
-   - 🆕 기획 문서: 노션, Jira 등에서 기획 문서를 복사해서 추가
+1. **학습 데이터 추가 (사이드바)**
+   - 📝 테스트 케이스: 기존 테스트 케이스를 표/CSV/Excel로 추가
+   - 📚 기획 문서: 노션, Jira 등에서 기획 문서를 복사해서 추가
 2. **검색창**에 테스트하고 싶은 기능을 입력하세요
 3. **AI가 자동으로** 기존 데이터를 학습하여 신규 테스트 케이스를 생성합니다
 4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel로 다운로드할 수 있습니다
 
 ### 🎯 주요 기능
-- ✅ 테스트 케이스 학습 및 저장
-- 🆕 기획 문서 학습 (Notion, Jira 등)
+- 📝 테스트 케이스 학습 및 저장
+- 📚 기획 문서 학습 (Notion, Jira 등)
 - 🤖 AI 기반 연관 테스트 케이스 추론
-- 📋 표 형식의 구조화된 테스트 케이스 생성
 - 📥 Excel(.xlsx) 파일로 내보내기
-
-### 🔥 NEW! 기획 문서 학습
-- 노션, Jira 등에서 기획 문서를 복사해서 AI에게 학습시킬 수 있습니다
-- AI가 기획 의도와 맥락을 이해하고 더 정확한 테스트 케이스를 생성합니다
 """)
