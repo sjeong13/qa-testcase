@@ -1,3 +1,5 @@
+#2025-11-10 비밀번호 인증 기능 추가
+
 import streamlit as st
 import json
 from datetime import datetime
@@ -86,6 +88,20 @@ st.set_page_config(
     page_icon="👾",
     layout="wide"
 )
+
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    # 로그인 화면 표시
+    password = st.text_input("비밀번호", type="password")
+    if st.button("🔓 로그인"):
+        correct_password = os.environ.get("APP_PASSWORD", "qabot2025")
+        if password == correct_password:
+            st.session_state.authenticated = True
+            st.rerun()
+    st.stop()  # 인증 전에는 여기서 멈춤
+
 
 st.title("👾 테케봇 (QA Test Case Bot)")
 st.markdown("---")
