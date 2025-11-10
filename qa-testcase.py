@@ -247,6 +247,25 @@ with st.sidebar:
                         st.rerun()
                     else:
                         st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
+
+    # 사이드바 맨 아래에 임시로 추가
+    with st.sidebar:
+        if st.button("🔍 사용 가능한 모델 확인"):
+            try:
+                import google.generativeai as genai
+                api_key = os.environ.get("GOOGLE_API_KEY")
+                genai.configure(api_key=api_key)
+            
+                models = genai.list_models()
+                st.write("### 사용 가능한 모델 목록:")
+                for model in models:
+                    if 'generateContent' in model.supported_generation_methods:
+                        st.write(f"✅ {model.name}")
+            except Exception as e:
+                st.error(f"오류: {str(e)}")
+
+
+    
                         
     # 샘플 데이터 로드
     if st.button("📋 샘플 테스트 케이스 로드"):
