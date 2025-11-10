@@ -23,7 +23,8 @@ def get_gemini_client():
         st.error("GOOGLE_API_KEY 환경 변수가 설정되지 않았습니다.")
         return None
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel('gemini-1.5-flash-latest')
+    return genai.GenerativeModel('models/gemini-2.5-flash')
+    # return genai.GenerativeModel('models/gemini-2.5-pro') # 품질 중요시
 
 # JSON 파일 경로
 TEST_CASES_FILE = "test_cases.json"
