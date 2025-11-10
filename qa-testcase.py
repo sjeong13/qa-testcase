@@ -588,8 +588,21 @@ with col1:
                                 json_str = response_text.split("```json")[1].split("```")[0].strip()
                             else:
                                 json_str = response_text.strip()
-                            
-                            ai_response = json.loads(json_str)
+                                
+                            # json.loads 대신 더 관대한 파싱 사용
+                            import json
+                            import ast
+    
+                            try:
+                                ai_response = json.loads(json_str)
+                            except json.JSONDecodeError as e:
+                                st.error(f"JSON 파싱 오류: {str(e)}")
+                                st.code(json_str[:500])  # 디버깅용: 앞부분만 표시
+        
+                                # 제어 문자 제거 후 재시도
+                                import re
+                                json_str_cleaned = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', json_str)
+                                ai_response = json.loads(json_str_cleaned)
                             
                             # 검색 히스토리에 추가
                             st.session_state.search_history.append({
