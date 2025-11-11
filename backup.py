@@ -1,6 +1,6 @@
 # ============================================
 #2025-11-10 : 비밀번호 인증 기능 추가
-#2025-11-11 : JSON 다운로드, 사이드바 넓이 조절, UI 개선, [수정] 버튼 추가
+#2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
 # ============================================
 import streamlit as st
 import json
@@ -84,7 +84,7 @@ if 'spec_docs' not in st.session_state:
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 
-# 🆕 편집 모드 세션 스테이트 추가
+# 편집 모드 세션 스테이트
 if 'editing_test_case_id' not in st.session_state:
     st.session_state.editing_test_case_id = None
 
@@ -97,31 +97,6 @@ st.set_page_config(
     page_icon="👾",
     layout="wide"
 )
-
-# 사이드바 넓이 조절 CSS
-#st.markdown("""
-    #<style>
-    #/* 사이드바 기본 넓이 증가 */
-    #[data-testid="stSidebar"] {
-        #min-width: 450px;
-        #max-width: 900px;
-    #}
-    #[data-testid="stSidebar"] > div:first-child {
-        #width: 450px;
-    #}
-    #/* 🆕 탭 내용물이 사이드바 너비를 따라가도록 설정 */
-    #[data-testid="stSidebar"] .stTabs [data-baseweb="tab-panel"] {
-        #width: 100% !important;
-    #}
-    #[data-testid="stSidebar"] .element-container {
-        #width: 100% !important;
-    #}
-    #/* 데이터 에디터도 넓게 */
-    #[data-testid="stSidebar"] .stDataFrame {
-        #width: 100% !important;
-    #}
-    #</style>
-    #""", unsafe_allow_html=True)
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -161,6 +136,8 @@ st.markdown("---")
 with st.sidebar:
     st.header("👾 WELCOME")
     
+    st.markdown("---")
+    
     # 탭으로 구분
     tab1, tab2 = st.tabs(["📝 테스트 케이스", "📚 기획 문서"])
     
@@ -170,7 +147,7 @@ with st.sidebar:
     with tab1:
         with st.expander("➕ [QA팀 전용 버튼]\n테스트 케이스 추가", expanded=False):
             st.markdown("### 📝 테스트 케이스 입력")
-            st.info("💡 표에서 직접 입력하거나, 엑셀/구글시트에서 데이터를 복사해서 붙여넣으세요.")
+            st.info("💡 3가지 방법 중 편한 방식으로 테스트 케이스를 추가하세요!")
             
             # 세션 스테이트에 편집용 데이터프레임 초기화
             if 'edit_df' not in st.session_state:
@@ -185,7 +162,7 @@ with st.sidebar:
                     'EXPECT RESULT': ['']
                 })
             
-            # 데이터 에디터 (표 형식 입력)
+            # ========== 방법 1: 표 형식 입력 ==========
             st.markdown("**방법 1: 표에서 직접 입력/편집**")
             
             # 행 추가/삭제 버튼
@@ -240,34 +217,8 @@ with st.sidebar:
             
             st.session_state.edit_df = edited_df
             
-            st.markdown("---")
-            
-            # CSV 파일 업로드
-            st.markdown("**방법 2: CSV/Excel 파일 업로드**")
-            uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'], key="upload_tc")
-            
-            if uploaded_file is not None:
-                try:
-                    if uploaded_file.name.endswith('.csv'):
-                        df = pd.read_csv(uploaded_file)
-                    else:
-                        df = pd.read_excel(uploaded_file)
-                    
-                    required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
-                    
-                    if not all(col in df.columns for col in required_columns):
-                        st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
-                        st.dataframe(df.head())
-                    else:
-                        st.session_state.edit_df = df[required_columns].fillna('')
-                        st.success(f"✅ {len(df)}개 행이 로드되었습니다.")
-                        st.rerun()
-                        
-                except Exception as e:
-                    st.error(f"파일 읽기 오류: {str(e)}")
-            
-            # 데이터 추가 버튼
-            if st.button("💾 테스트 케이스 저장", type="primary", disabled=(len(edited_df) == 0), key="save_tc"):
+            # 표 형식 저장 버튼
+            if st.button("💾 표 형식 저장", type="primary", disabled=(len(edited_df) == 0), key="save_table_tc"):
                 if len(edited_df) > 0:
                     added_count = 0
                     
@@ -311,10 +262,83 @@ with st.sidebar:
                             'STEP': [''],
                             'EXPECT RESULT': ['']
                         })
-                        st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다.")
+                        st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다!")
                         st.rerun()
                     else:
                         st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
+            
+            st.markdown("---")
+            
+            # ========== 방법 2: CSV/Excel 파일 업로드 ==========
+            st.markdown("**방법 2: CSV/Excel 파일 업로드**")
+            uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'], key="upload_tc")
+            
+            if uploaded_file is not None:
+                try:
+                    if uploaded_file.name.endswith('.csv'):
+                        df = pd.read_csv(uploaded_file)
+                    else:
+                        df = pd.read_excel(uploaded_file)
+                    
+                    required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
+                    
+                    if not all(col in df.columns for col in required_columns):
+                        st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
+                        st.dataframe(df.head())
+                    else:
+                        st.session_state.edit_df = df[required_columns].fillna('')
+                        st.success(f"✅ {len(df)}개 행이 로드되었습니다!")
+                        st.info("👆 위의 표를 확인하고 '💾 표 형식 저장' 버튼을 눌러주세요.")
+                        
+                except Exception as e:
+                    st.error(f"파일 읽기 오류: {str(e)}")
+            
+            st.markdown("---")
+            
+            # ========== 🆕 방법 3: 줄글 형식 (자유 입력) ==========
+            st.markdown("**방법 3: 줄글 형식 (자유 입력)**")
+            st.info("💡 테스트 케이스를 자유롭게 작성하고 AI가 학습할 수 있도록 저장하세요!")
+            
+            tc_free_title = st.text_input(
+                "제목 *",
+                placeholder="예: 쿠폰 지정 발행 테스트 설계",
+                key="tab1_tc_free_title"
+            )
+            
+            tc_free_content = st.text_area(
+                "내용 *",
+                placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n예: 1. BO에서 쿠폰 생성\n 2. 특정 회원에게 쿠폰 지정 발행\n 3. FO에서 쿠폰 사용 가능 여부 확인\n...",
+                height=300,
+                key="tab1_tc_free_content"
+            )
+            
+            # 🆕 추가: 카테고리 선택
+            tc_free_category = st.text_input(
+                "카테고리",
+                placeholder="예: 쿠폰",
+                key="tab1_tc_free_category"
+            )
+            
+            # 🆕 추가: 저장 버튼 및 로직
+            if st.button("💾 줄글 형식 저장", type="primary", key="tab1_save_free_form_tc"):
+                if not tc_free_title or not tc_free_content:
+                    st.warning("⚠️ 제목과 내용은 필수입니다!")
+                else:
+                    # 줄글 형식으로 저장 (structured_data 없이 저장)
+                    free_form_test = {
+                        "id": len(st.session_state.test_cases) + 1,
+                        "category": tc_free_category if tc_free_category else "기타",
+                        "name": tc_free_title,
+                        "description": tc_free_content,
+                        "steps": [],
+                        "related_features": [tc_free_category] if tc_free_category else [],
+                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "input_type": "free_form"  # 🆕 구분자 추가
+                    }
+                    st.session_state.test_cases.append(free_form_test)
+                    save_test_cases_to_file(st.session_state.test_cases)
+                    st.success(f"✅ '{tc_free_title}' 테스트 케이스가 저장되었습니다!")
+                    st.rerun()
         
         # 샘플 데이터 로드
         if st.button("📋 샘플 테스트 케이스 로드"):
@@ -418,7 +442,7 @@ with st.sidebar:
             ]
             st.session_state.test_cases = sample_cases
             save_test_cases_to_file(st.session_state.test_cases)
-            st.success("✅ 샘플 테스트 케이스가 로드되었습니다.")
+            st.success("✅ 샘플 테스트 케이스가 로드되었습니다!")
             st.rerun()
         
         st.markdown("---")
@@ -427,7 +451,7 @@ with st.sidebar:
         st.subheader(f"📋 저장된 테스트 케이스")
         st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
         
-        # JSON 다운로드 버튼 추가
+        # JSON 다운로드 버튼
         if st.session_state.test_cases:
             json_data = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
             st.download_button(
@@ -448,23 +472,25 @@ with st.sidebar:
                 for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
                     st.write(f"**{cat}**: {count}개")
             
-            # 기본값 접힌 상태(expanded=False)
             with st.expander("📝 전체 테스트 케이스 보기", expanded=False):
                 for tc in st.session_state.test_cases:
+                    # 헤더 생성
                     if 'structured_data' in tc:
                         data = tc['structured_data']
                         header = f"[{data['category']}] {data['depth1']}"
                         if data.get('depth2'):
                             header += f" > {data['depth2']}"
+                        input_type_badge = "📊 표"
                     else:
                         header = f"[{tc['category']}] {tc['name']}"
-                        
-                    with st.expander(header, expanded=False):
-                       # 🆕 편집 모드인 경우 편집 폼 표시
+                        input_type_badge = "📝 줄글" if tc.get('input_type') == 'free_form' else "📋 기타"
+                    
+                    # 🆕 입력 방식 표시
+                    with st.expander(f"{input_type_badge} {header}", expanded=False):
+                        # 편집 모드
                         if st.session_state.editing_test_case_id == tc['id']:
                             st.markdown("### ✏️ 테스트 케이스 수정")
                             
-                            # 기존 데이터 가져오기
                             if 'structured_data' in tc:
                                 data = tc['structured_data']
                                 edit_no = st.text_input("NO", value=data.get('no', ''), key=f"edit_no_{tc['id']}")
@@ -477,13 +503,12 @@ with st.sidebar:
                                 edit_expect = st.text_area("EXPECT RESULT", value=data.get('expect_result', ''), key=f"edit_exp_{tc['id']}")
                             else:
                                 edit_category = st.text_input("CATEGORY *", value=tc.get('category', ''), key=f"edit_cat_{tc['id']}")
-                                edit_name = st.text_input("NAME *", value=tc.get('name', ''), key=f"edit_name_{tc['id']}")
-                                edit_description = st.text_area("DESCRIPTION", value=tc.get('description', ''), height=150, key=f"edit_desc_{tc['id']}")
+                                edit_name = st.text_input("제목 *", value=tc.get('name', ''), key=f"edit_name_{tc['id']}")
+                                edit_description = st.text_area("내용", value=tc.get('description', ''), height=150, key=f"edit_desc_{tc['id']}")
                             
                             col1, col2 = st.columns(2)
                             with col1:
                                 if st.button("💾 저장", key=f"save_edit_{tc['id']}", type="primary"):
-                                    # 테스트 케이스 업데이트
                                     if 'structured_data' in tc:
                                         tc['category'] = edit_category
                                         tc['name'] = f"{edit_category} - {edit_depth1}" + (f" - {edit_depth2}" if edit_depth2 else "")
@@ -529,12 +554,17 @@ with st.sidebar:
                                 st.write(f"**STEP:** {data.get('step', '')}")
                                 st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
                             else:
-                                st.write(f"**설명:** {tc['description']}")
-                                st.write(f"**스텝:** {tc ['steps']}")
-                                st.write(f"**해시태그:** {tc ['related_features']}")                                
-                                
+                                st.write(f"**제목:** {tc['name']}")
+                                st.write(f"**내용:**")
+                                st.text(tc['description'])
+                                if tc.get('steps'):
+                                    st.write(f"**주요 단계:** {', '.join(tc['steps'])}")
+                                if tc.get('related_features'):
+                                    st.write(f"**관련 기능:** {', '.join(tc['related_features'])}")
                             
-                            # 🆕 수정/삭제 버튼
+                            st.caption(f"📅 작성일: {tc.get('created_at', 'N/A')}")
+                            
+                            # 수정/삭제 버튼
                             col1, col2 = st.columns(2)
                             with col1:
                                 if st.button("✏️ 수정", key=f"edit_tc_{tc['id']}"):
@@ -546,53 +576,39 @@ with st.sidebar:
                                     save_test_cases_to_file(st.session_state.test_cases)
                                     st.success("✅ 삭제되었습니다!")
                                     st.rerun()
-
-
-                        
-                        #if 'structured_data' in tc:
-                            #st.write(f"**NO:** {data.get('no', '')}")
-                            #st.write(f"**CATEGORY:** {data.get('category', '')}")
-                            #st.write(f"**STEP:** {data.get('step', '')}")
-                        #else:
-                            #st.write(f"**설명:** {tc['description']}")
-                            
-                        #if st.button(f"삭제", key=f"delete_tc_{tc['id']}"):
-                            #st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
-                            #save_test_cases_to_file(st.session_state.test_cases)
-                            #st.rerun()
     
     # ============================================
-    # 탭 2: 기획 문서 추가
+    # 📚 탭 2: 기획 문서 추가
     # ============================================
     with tab2:
         with st.expander("➕ [QA팀 전용 버튼]\n기획 문서 추가", expanded=False):
             st.markdown("### 📄 기획 문서 입력")
             st.info("💡 노션, Jira에서 작성한 문서를 복사해서 붙여넣으세요.\nAI가 이 내용을 학습합니다!")
             
-            # 문서 제목
+            # 문서 제목 (key는 그대로 유지)
             doc_title = st.text_input(
                 "문서 제목 *",
                 placeholder="예: 공동구매 기능 스펙 문서",
-                key="spec_title"
+                key="tab2_spec_title"
             )
             
             # 문서 유형
             doc_type = st.selectbox(
                 "문서 유형",
                 ["Notion", "Jira", "기타"],
-                key="spec_type"
+                key="tab2_spec_type"
             )
             
-            # 문서 내용 (긴 텍스트)
+            # 문서 내용
             doc_content = st.text_area(
                 "문서 내용 *",
                 placeholder="기획 의도, 스펙, 요구사항 등을 자유롭게 붙여넣으세요.\n\n예:\n[기획 배경]\n현재 공동구매 기능은...\n\n[주요 기능]\n1. 브랜드 정보 입력 모달\n2. 캠페인 생성 기능\n...",
                 height=300,
-                key="spec_content"
+                key="tab2_spec_content"
             )
             
             # 저장 버튼
-            if st.button("💾 기획 문서 저장", type="primary", key="save_spec"):
+            if st.button("💾 기획 문서 저장", type="primary", key="tab2_save_spec"):
                 if not doc_title or not doc_content:
                     st.warning("⚠️ 문서 제목과 내용은 필수입니다!")
                 else:
@@ -614,7 +630,7 @@ with st.sidebar:
         st.subheader(f"📄 저장된 기획 문서")
         st.metric("전체 문서 수", f"{len(st.session_state.spec_docs)}개")
         
-        # 🆕 JSON 다운로드 버튼 추가
+        # JSON 다운로드 버튼
         if st.session_state.spec_docs:
             json_data = json.dumps(st.session_state.spec_docs, ensure_ascii=False, indent=2)
             st.download_button(
@@ -629,7 +645,7 @@ with st.sidebar:
             with st.expander("📝 전체 기획 문서 보기", expanded=False):
                 for doc in st.session_state.spec_docs:
                     with st.expander(f"[{doc['doc_type']}] {doc['title']}", expanded=False):
-                        # 🆕 편집 모드인 경우 편집 폼 표시
+                        # 편집 모드
                         if st.session_state.editing_spec_doc_id == doc['id']:
                             st.markdown("### ✏️ 기획 문서 수정")
                             
@@ -661,7 +677,7 @@ with st.sidebar:
                             preview = doc['content'][:200] + "..." if len(doc['content']) > 200 else doc['content']
                             st.text(preview)
                             
-                            # 🆕 수정/삭제 버튼
+                            # 수정/삭제 버튼
                             col1, col2 = st.columns(2)
                             with col1:
                                 if st.button("✏️ 수정", key=f"edit_spec_{doc['id']}"):
@@ -673,25 +689,13 @@ with st.sidebar:
                                     save_spec_docs_to_file(st.session_state.spec_docs)
                                     st.success("✅ 삭제되었습니다!")
                                     st.rerun()
-
-                        
-                        #st.write(f"**작성일:** {doc['created_at']}")
-                        #st.write(f"**내용 미리보기:**")
-                        #preview = doc['content'][:200] + "..." if len(doc['content']) > 200 else doc['content']
-                        #st.text(preview)
-                        
-                        #if st.button(f"삭제", key=f"delete_spec_{doc['id']}"):
-                            #st.session_state.spec_docs = [d for d in st.session_state.spec_docs if d['id'] != doc['id']]
-                            #save_spec_docs_to_file(st.session_state.spec_docs)
-                            #st.rerun()
-
+    
     st.markdown("---")
     
-    # 사용 가능한 모델 확인 버튼 (사이드바 하단)
+    # 개발자 도구
     with st.expander("🔧 개발자 도구", expanded=False):
         if st.button("🔍 사용 가능한 Gemini 모델 확인"):
             try:
-                import google.generativeai as genai
                 api_key = os.environ.get("GOOGLE_API_KEY")
                 genai.configure(api_key=api_key)
             
@@ -703,7 +707,9 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"오류: {str(e)}")
 
-# 메인 영역
+# ============================================
+# 메인 영역 - AI 기반 테스트 케이스 추천
+# ============================================
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -725,17 +731,14 @@ with col1:
                     client = get_gemini_client()
                     
                     if client:
-                        # 테스트 케이스 데이터를 문자열로 변환
                         test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
                         
-                        # 기획 문서 데이터를 문자열로 변환
                         spec_docs_str = ""
                         if st.session_state.spec_docs:
                             spec_docs_str = "\n\n=== 기획 문서 ===\n"
                             for doc in st.session_state.spec_docs:
                                 spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{doc['content']}\n\n---\n"
                         
-                        # AI 프롬프트 생성
                         prompt = f"""[역할 부여]
 너는 나와 같이 IT SaaS에 다니고 있는 QA 전문가, QA 엔지니어야.
 (1) 테스트 설계, 테스트 케이스 작성 
@@ -810,42 +813,32 @@ with col1:
                             response = client.generate_content(prompt)
                             response_text = response.text
                             
-                            # JSON 추출
                             if "```json" in response_text:
                                 json_str = response_text.split("```json")[1].split("```")[0].strip()
                             else:
                                 json_str = response_text.strip()
-                                
-                            # json.loads 대신 더 관대한 파싱 사용
-                            import json
-                            import ast
-    
+                            
                             try:
                                 ai_response = json.loads(json_str)
                             except json.JSONDecodeError as e:
                                 st.error(f"JSON 파싱 오류: {str(e)}")
-                                st.code(json_str[:500])  # 디버깅용: 앞부분만 표시
-        
-                                # 제어 문자 제거 후 재시도
+                                st.code(json_str[:500])
+                                
                                 import re
                                 json_str_cleaned = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', json_str)
                                 ai_response = json.loads(json_str_cleaned)
                             
-                            # 검색 히스토리에 추가
                             st.session_state.search_history.append({
                                 "query": search_query,
                                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "response": ai_response
                             })
                             
-                            # 결과 표시
                             st.success("✅ AI 분석이 완료되었습니다!")
                             
-                            # AI의 추론 과정
                             st.markdown("### 🧠 AI의 사고 과정")
                             st.info(ai_response.get("reasoning", "추론 과정 없음"))
                             
-                            # 기존 테스트 케이스 추천
                             if ai_response.get("existing_test_cases"):
                                 st.markdown("### 📝 기존 테스트 케이스 활용")
                                 
@@ -857,11 +850,9 @@ with col1:
                                             st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
                                             st.markdown(f"**설명:** {test_case['description']}")
                             
-                            # 새로 생성된 테스트 케이스 (표 형식)
                             if ai_response.get("new_test_cases"):
                                 st.markdown("### 🆕 AI가 생성한 신규 테스트 케이스")
                                 
-                                # 데이터프레임 생성
                                 df_data = []
                                 for tc in ai_response.get("new_test_cases", []):
                                     df_data.append({
@@ -877,14 +868,12 @@ with col1:
                                 
                                 df = pd.DataFrame(df_data)
                                 
-                                # 스타일링된 표로 표시
                                 st.dataframe(
                                     df,
                                     use_container_width=True,
                                     hide_index=True
                                 )
                                 
-                                # Excel 다운로드
                                 if EXCEL_AVAILABLE:
                                     output = BytesIO()
                                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -913,12 +902,10 @@ with col1:
                                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                     )
                             
-                            # 테스트 순서 설명
                             if ai_response.get("test_order"):
                                 st.markdown("### 🔄 권장 테스트 순서")
                                 st.write(ai_response["test_order"])
                             
-                            # 추가 제안
                             if ai_response.get("additional_suggestions"):
                                 st.markdown("### 💡 추가 제안 (Edge Cases)")
                                 st.warning(ai_response["additional_suggestions"])
@@ -946,7 +933,7 @@ with col2:
 # 하단 정보
 st.markdown("---")
 st.markdown("""
-### 💡 사용 방법
+## 💡 사용 방법
 1. **학습 데이터 추가 (사이드바)**
    - 📝 테스트 케이스: 기존 테스트 케이스를 표/CSV/Excel로 추가
    - 📚 기획 문서: 노션, Jira 등에서 기획 문서를 복사해서 추가
@@ -954,7 +941,8 @@ st.markdown("""
 3. **AI가 자동으로** 기존 데이터를 학습하여 신규 테스트 케이스를 생성합니다
 4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel로 다운로드할 수 있습니다
 
-### 💾 데이터 백업
+
+## 💾 데이터 백업
 - JSON 다운로드 버튼으로 테스트 케이스와 기획 문서를 정기적으로 백업할 수 있습니다.
 - 앱 재배포 시 데이터가 초기화될 수 있습니다.
 """)
