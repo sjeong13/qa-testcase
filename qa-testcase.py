@@ -195,6 +195,10 @@ with st.sidebar:
                         'EXPECT RESULT': ['']
                     })
                     st.rerun()
+
+            # 데이터 에디터를 위한 고유 키 생성
+            if 'editor_key' not in st.session_state:
+                st.session_state.editor_key = 0
             
             # 데이터 에디터 표시
             edited_df = st.data_editor(
@@ -212,8 +216,14 @@ with st.sidebar:
                     "STEP": st.column_config.TextColumn("STEP", width="large", help="수행 단계"),
                     "EXPECT RESULT": st.column_config.TextColumn("EXPECT RESULT", width="large", help="예상 결과"),
                 },
-                key="test_case_editor"
+                # key="test_case_editor"
+                key=f"test_case_editor_{st.session_state.editor_key}"  # 동적 키 사용
             )
+            # 변경사항 즉시 반영
+            if not edited_df.equals(st.session_state.edit_df):
+                st.session_state.edit_df = edited_df.copy()
+                st.session_state.editor_key += 1  # 키 업데이트로 강제 리프레시
+                st.rerun()
             
             st.session_state.edit_df = edited_df
             
