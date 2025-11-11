@@ -530,8 +530,8 @@ with st.sidebar:
                                 st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
                             else:
                                 st.write(f"**설명:** {tc['description']}")
-                                st.write(f"**스텝:** {tc steps}")
-                                st.write(f"**해시태그:** {tc related_features}")                                
+                                st.write(f"**스텝:** {tc 'steps'}")
+                                st.write(f"**해시태그:** {tc 'related_features'}")                                
                                 
                             
                             # 🆕 수정/삭제 버튼
