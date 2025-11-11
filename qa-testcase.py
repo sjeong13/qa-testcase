@@ -265,6 +265,39 @@ with st.sidebar:
                         
                 except Exception as e:
                     st.error(f"파일 읽기 오류: {str(e)}")
+
+            
+
+            
+            
+            
+            
+            
+            
+            st.markdown("**방법 3: 자유 형식**")
+            # 문서 제목
+            doc_title = st.text_input(
+                "문서 제목 *",
+                placeholder="예: 쿠폰 지정 발행 테스트 설계",
+                key="spec_title"
+            )
+            
+            # 문서 내용 (긴 텍스트)
+            doc_content = st.text_area(
+                "내용 *",
+                placeholder="테스트 설계 내용을 자유롭게 붙여넣으세요.",
+                height=300,
+                key="spec_content"
+            )
+
+
+
+
+
+
+            
+
+            
             
             # 데이터 추가 버튼
             if st.button("💾 테스트 케이스 저장", type="primary", disabled=(len(edited_df) == 0), key="save_tc"):
