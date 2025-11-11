@@ -317,7 +317,7 @@ with st.sidebar:
             
             tc_free_content = st.text_area(
                 "내용 *",
-                placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n예: 1. BO에서 쿠폰 생성\n 2. 특정 회원에게 쿠폰 지정 발행\n 3. FO에서 쿠폰 사용 가능 여부 확인\n...",
+                placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n[예시]\n1. BO에서 쿠폰 생성\n2. 특정 회원에게 쿠폰 지정 발행\n3. FO에서 쿠폰 사용 가능 여부 확인\n...",
                 height=300,
                 key="tab1_tc_free_content"
             )
@@ -325,7 +325,7 @@ with st.sidebar:
             # 🆕 추가: 카테고리 선택
             tc_free_category = st.text_input(
                 "카테고리",
-                placeholder="예: 쿠폰",
+                placeholder="쿠폰",
                 key="tab1_tc_free_category"
             )
             
