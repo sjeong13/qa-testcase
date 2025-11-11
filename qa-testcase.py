@@ -99,29 +99,29 @@ st.set_page_config(
 )
 
 # 사이드바 넓이 조절 CSS
-st.markdown("""
-    <style>
-    /* 사이드바 기본 넓이 증가 */
-    [data-testid="stSidebar"] {
-        min-width: 450px;
-        max-width: 900px;
-    }
-    [data-testid="stSidebar"] > div:first-child {
-        width: 450px;
-    }
-    /* 🆕 탭 내용물이 사이드바 너비를 따라가도록 설정 */
-    [data-testid="stSidebar"] .stTabs [data-baseweb="tab-panel"] {
-        width: 100% !important;
-    }
-    [data-testid="stSidebar"] .element-container {
-        width: 100% !important;
-    }
-    /* 데이터 에디터도 넓게 */
-    [data-testid="stSidebar"] .stDataFrame {
-        width: 100% !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+#st.markdown("""
+    #<style>
+    #/* 사이드바 기본 넓이 증가 */
+    #[data-testid="stSidebar"] {
+        #min-width: 450px;
+        #max-width: 900px;
+    #}
+    #[data-testid="stSidebar"] > div:first-child {
+        #width: 450px;
+    #}
+    #/* 🆕 탭 내용물이 사이드바 너비를 따라가도록 설정 */
+    #[data-testid="stSidebar"] .stTabs [data-baseweb="tab-panel"] {
+        #width: 100% !important;
+    #}
+    #[data-testid="stSidebar"] .element-container {
+        #width: 100% !important;
+    #}
+    #/* 데이터 에디터도 넓게 */
+    #[data-testid="stSidebar"] .stDataFrame {
+        #width: 100% !important;
+    #}
+    #</style>
+    #""", unsafe_allow_html=True)
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -530,6 +530,9 @@ with st.sidebar:
                                 st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
                             else:
                                 st.write(f"**설명:** {tc['description']}")
+                                st.write(f"**스텝:** {tc['steps']}")
+                                st.write(f"**해시태그:** {tc['related_features']}")                                
+                                
                             
                             # 🆕 수정/삭제 버튼
                             col1, col2 = st.columns(2)
