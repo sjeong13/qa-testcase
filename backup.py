@@ -1,6 +1,7 @@
-#2025-11-11 백업
-#2025-11-10 비밀번호 인증 기능 추가
-
+# ============================================
+#2025-11-10 : 비밀번호 인증 기능 추가
+#2025-11-11 : JSON 다운로드, 사이드바 넓이 조절, UI 개선, [수정] 버튼 추가
+# ============================================
 import streamlit as st
 import json
 from datetime import datetime
@@ -83,6 +84,13 @@ if 'spec_docs' not in st.session_state:
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 
+# 🆕 편집 모드 세션 스테이트 추가
+if 'editing_test_case_id' not in st.session_state:
+    st.session_state.editing_test_case_id = None
+
+if 'editing_spec_doc_id' not in st.session_state:
+    st.session_state.editing_spec_doc_id = None
+
 # 페이지 설정
 st.set_page_config(
     page_title="테케봇 (QA Test Case Assistant)",
@@ -90,19 +98,61 @@ st.set_page_config(
     layout="wide"
 )
 
+# 사이드바 넓이 조절 CSS
+#st.markdown("""
+    #<style>
+    #/* 사이드바 기본 넓이 증가 */
+    #[data-testid="stSidebar"] {
+        #min-width: 450px;
+        #max-width: 900px;
+    #}
+    #[data-testid="stSidebar"] > div:first-child {
+        #width: 450px;
+    #}
+    #/* 🆕 탭 내용물이 사이드바 너비를 따라가도록 설정 */
+    #[data-testid="stSidebar"] .stTabs [data-baseweb="tab-panel"] {
+        #width: 100% !important;
+    #}
+    #[data-testid="stSidebar"] .element-container {
+        #width: 100% !important;
+    #}
+    #/* 데이터 에디터도 넓게 */
+    #[data-testid="stSidebar"] .stDataFrame {
+        #width: 100% !important;
+    #}
+    #</style>
+    #""", unsafe_allow_html=True)
+
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    # 로그인 화면 표시
-    password = st.text_input("비밀번호", type="password")
-    if st.button("🔓 로그인"):
-        correct_password = os.environ.get("APP_PASSWORD", "qabot2025")
-        if password == correct_password:
-            st.session_state.authenticated = True
-            st.rerun()
-    st.stop()  # 인증 전에는 여기서 멈춤
-
+    st.title("🔒 테케봇 로그인")
+    st.markdown("---")
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.info("💡 비밀번호를 입력하세요.")
+        
+        password = st.text_input(
+            "비밀번호",
+            type="password",
+            placeholder="비밀번호를 입력하세요"
+        )
+        
+        col_a, col_b, col_c = st.columns([1, 1, 1])
+        with col_b:
+            if st.button("🔓 로그인", type="primary", use_container_width=True):
+                correct_password = os.environ.get("APP_PASSWORD", "qabot2025")
+                
+                if password == correct_password:
+                    st.session_state.authenticated = True
+                    st.success("✅ 로그인 성공!")
+                    st.rerun()
+                else:
+                    st.error("❌ 잘못된 비밀번호입니다.")    
+    st.stop()
 
 st.title("👾 테케봇 (QA Test Case Bot)")
 st.markdown("---")
@@ -115,7 +165,7 @@ with st.sidebar:
     tab1, tab2 = st.tabs(["📝 테스트 케이스", "📚 기획 문서"])
     
     # ============================================
-    # 📋 탭 1: 테스트 케이스 추가 (기존)
+    # 📝 탭 1: 테스트 케이스 추가
     # ============================================
     with tab1:
         with st.expander("➕ [QA팀 전용 버튼]\n테스트 케이스 추가", expanded=False):
@@ -261,140 +311,132 @@ with st.sidebar:
                             'STEP': [''],
                             'EXPECT RESULT': ['']
                         })
-                        st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다!")
+                        st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다.")
                         st.rerun()
                     else:
                         st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
+        
+        # 샘플 데이터 로드
+        if st.button("📋 샘플 테스트 케이스 로드"):
+            sample_cases = [
+                {
+                    "id": 1,
+                    "category": "회원가입",
+                    "name": "로그인/가입 모달로 사용 ON/OFF 테스트",
+                    "description": "'로그인/가입 모달로 사용' 기능 활성화 여부에 따라 회원, 주문 관련 동작이 정상인지 확인",
+                    "steps": [
+                        "디자인 모드 > 공통 디자인 설정에서 회원가입 모달 사용 ON 설정",
+                        "비회원이 회원가입 시도",
+                        "모달이 정상적으로 표시되는지 확인",
+                        "로그인/가입 모달 사용 OFF 설정하여 동작 확인",
+                    ],
+                    "related_features": ["회원가입", "로그인", "주문", "가입", "구매"],
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                },
+                {
+                    "id": 2,
+                    "category": "회원가입",
+                    "name": "가입 유형별 테스트",
+                    "description": "일반 이메일 가입, 소셜 가입이 모두 정상 작동하는지 확인",
+                    "steps": [
+                        "이메일 가입 버튼 클릭 > 이메일, 비밀번호 입력 후 가입 > 가입 완료 확인",
+                        "카카오 로그인 또는 카카오 싱크로 회원가입 완료 시도",
+                        "구글 로그인으로 회원가입 완료 테스트"
+                        "네이버 로그인으로 회원가입 완료 테스트",
+                        "라인 로그인으로 회원가입 완료 테스트",
+                        "애플 로그인으로 회원가입 완료 테스트",
+                        "페이스북 로그인으로 회원가입 완료 테스트"
 
-    # 사이드바 맨 아래에 임시로 추가
-    with st.sidebar:
-        if st.button("🔍 사용 가능한 모델 확인"):
-            try:
-                import google.generativeai as genai
-                api_key = os.environ.get("GOOGLE_API_KEY")
-                genai.configure(api_key=api_key)
-            
-                models = genai.list_models()
-                st.write("### 사용 가능한 모델 목록:")
-                for model in models:
-                    if 'generateContent' in model.supported_generation_methods:
-                        st.write(f"✅ {model.name}")
-            except Exception as e:
-                st.error(f"오류: {str(e)}")
-
-
-    
-                        
-    # 샘플 데이터 로드
-    if st.button("📋 샘플 테스트 케이스 로드"):
-        sample_cases = [
-            {
-                "id": 1,
-                "category": "회원가입",
-                "name": "로그인/가입 모달로 사용 ON/OFF 테스트",
-                "description": "'로그인/가입 모달로 사용' 기능 활성화 여부에 따라 회원, 주문 관련 동작이 정상인지 확인",
-                "steps": [
-                    "디자인 모드 > 공통 디자인 설정에서 회원가입 모달 사용 ON 설정",
-                    "비회원이 회원가입 시도",
-                    "모달이 정상적으로 표시되는지 확인",
-                    "로그인/가입 모달 사용 OFF 설정하여 동작 확인",
-                ],
-                "related_features": ["회원가입", "로그인", "주문", "가입", "구매"],
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            },
-            {
-                "id": 2,
-                "category": "회원가입",
-                "name": "가입 유형별 테스트",
-                "description": "일반 이메일 가입, 소셜 가입이 모두 정상 작동하는지 확인",
-                "steps": [
-                    "이메일 가입 버튼 클릭 > 이메일, 비밀번호 입력 후 가입 > 가입 완료 확인",
-                    "카카오 로그인 또는 카카오 싱크로 회원가입 완료 시도",
-                    "구글 로그인으로 회원가입 완료 테스트"
-                    "네이버 로그인으로 회원가입 완료 테스트",
-                    "라인 로그인으로 회원가입 완료 테스트",
-                    "애플 로그인으로 회원가입 완료 테스트",
-                    "페이스북 로그인으로 회원가입 완료 테스트"
-
-                ],
-                "related_features": ["회원가입", "이메일", "소셜로그인", "카카오", "구글", "페이스북", "네이버", "애플", "라인" "로그인", "주문", "가입", "구매"],
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            },
-            {
-                "id": 3,
-                "category": "회원가입",
-                "name": "회원 유형별 가입 테스트",
-                "description": "일반 회원, 사업자 회원, 새 사용자 추가 유형으로 가입이 되는지 확인",
-                "steps": [
-                    "일반 회원으로 가입 진행 > 필수 정보 입력 및 가입 완료",
-                    "사업자 회원 선택 후 사업자 정보 입력 > 가입 완료"
-                    "'BO 환경설정 > 회원가입·그룹·등급에서 사용자 추가' 기능 사용 > 엔드유저가 FO에서 사용자가 추가한 회원 유형으로 회원가입 완료"
-                ],
-                "related_features": ["회원가입", "일반회원", "사업자회원", "가입", "주문", "구매", "가입유형"],
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            },
-            {
-                "id": 4,
-                "category": "주문",
-                "name": "회원 주문 프로세스 테스트",
-                "description": "로그인한 회원의 주문 전체 프로세스 검증",
-                "steps": [
-                    "상품 상세페이지에서 [구매하기] 버튼 클릭 > 로그인 상태 확인 > 주문서로 이동 > 주문 완료",
-                    "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 상태 확인 > 주문서로 이동 > 주문 완료]",
-                ],
-                "related_features": ["주문", "회원", "장바구니", "결제", "구매", "상품 상세페이지"],
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            },
-            {
-                "id": 5,
-                "category": "주문",
-                "name": "비회원 주문 프로세스 테스트",
-                "description": "비로그인 상태에서 주문이 가능한지 확인",
-                "steps": [
-                    "로그아웃 상태 확인",
-                    "상품 선택 및 장바구니 담기",
-                    "상품 상세페이지에서 [구매하기] 버튼 클릭 > 로그인 페이지 또는 로그인 모달에서 [비회원 주문] 버튼 클릭 > 주문서로 이동 > 주문 완료",
-                    "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 페이지 또는 로그인 모달에서 [비회원 주문] 버튼 클릭 > 주문서로 이동 > 주문 완료]",
-                ],
-                "related_features": ["주문", "비회원", "장바구니", "결제", "구매", "상품 상세페이지"],
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            },
-            {
-                "id": 6,
-                "category": "결제",
-                "name": "국내 전자 결제 수단별 테스트",
-                "description": "신용카드, 계좌이체, 간편결제 등 다양한 결제 수단 테스트",
-                "steps": [
-                    "무통장 입금 결제 테스트"
-                    "신용카드 결제 선택 및 완료",
-                    "가상계좌 결제 테스트"
-                    "실시간 계좌이체 결제 테스트",
-                    "카카오페이 간편결제(직연동) 결제 테스트",
-                    "네이버페이 주문형 결제 테스트",
-                    "네이버페이 결제형 결제 테스트"
-                    "카카오페이 간편결제(이니시스) 결제 테스트",
-                    "토스페이(직연동) 결제 테스트",
-                    "PAYCO 결제 테스트",
-                    "삼성페이 결제 테스트",
-                    "휴대폰 결제 테스트",
-                    "정기구독 결제 테스트",
-                    "톡체크아웃 결제 테스트",
-                    "결제 실패 시나리오 테스트"
-                ],
-                "related_features": ["결제", "신용카드", "간편결제", "주문", "PG"],
-                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-        ]
-        st.session_state.test_cases = sample_cases
-        save_test_cases_to_file(st.session_state.test_cases)  # 파일로 저장
-        st.success("✅ 샘플 테스트 케이스가 로드되었습니다!")
-        st.rerun()
+                    ],
+                    "related_features": ["회원가입", "이메일", "소셜로그인", "카카오", "구글", "페이스북", "네이버", "애플", "라인" "로그인", "주문", "가입", "구매"],
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                },
+                {
+                    "id": 3,
+                    "category": "회원가입",
+                    "name": "회원 유형별 가입 테스트",
+                    "description": "일반 회원, 사업자 회원, 새 사용자 추가 유형으로 가입이 되는지 확인",
+                    "steps": [
+                        "일반 회원으로 가입 진행 > 필수 정보 입력 및 가입 완료",
+                        "사업자 회원 선택 후 사업자 정보 입력 > 가입 완료"
+                        "'BO 환경설정 > 회원가입·그룹·등급에서 사용자 추가' 기능 사용 > 엔드유저가 FO에서 사용자가 추가한 회원 유형으로 회원가입 완료"
+                    ],
+                    "related_features": ["회원가입", "일반회원", "사업자회원", "가입", "주문", "구매", "가입유형"],
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                },
+                {
+                    "id": 4,
+                    "category": "주문",
+                    "name": "회원 주문 프로세스 테스트",
+                    "description": "로그인한 회원의 주문 전체 프로세스 검증",
+                    "steps": [
+                        "상품 상세페이지에서 [구매하기] 버튼 클릭 > 로그인 상태 확인 > 주문서로 이동 > 주문 완료",
+                        "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 상태 확인 > 주문서로 이동 > 주문 완료]",
+                    ],
+                    "related_features": ["주문", "회원", "장바구니", "결제", "구매", "상품 상세페이지"],
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                },
+                {
+                    "id": 5,
+                    "category": "주문",
+                    "name": "비회원 주문 프로세스 테스트",
+                    "description": "비로그인 상태에서 주문이 가능한지 확인",
+                    "steps": [
+                        "로그아웃 상태 확인",
+                        "상품 선택 및 장바구니 담기",
+                        "상품 상세페이지에서 [구매하기] 버튼 클릭 > 로그인 페이지 또는 로그인 모달에서 [비회원 주문] 버튼 클릭 > 주문서로 이동 > 주문 완료",
+                        "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 페이지 또는 로그인 모달에서 [비회원 주문] 버튼 클릭 > 주문서로 이동 > 주문 완료]",
+                    ],
+                    "related_features": ["주문", "비회원", "장바구니", "결제", "구매", "상품 상세페이지"],
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                },
+                {
+                    "id": 6,
+                    "category": "결제",
+                    "name": "국내 전자 결제 수단별 테스트",
+                    "description": "신용카드, 계좌이체, 간편결제 등 다양한 결제 수단 테스트",
+                    "steps": [
+                        "무통장 입금 결제 테스트"
+                        "신용카드 결제 선택 및 완료",
+                        "가상계좌 결제 테스트"
+                        "실시간 계좌이체 결제 테스트",
+                        "카카오페이 간편결제(직연동) 결제 테스트",
+                        "네이버페이 주문형 결제 테스트",
+                        "네이버페이 결제형 결제 테스트"
+                        "카카오페이 간편결제(이니시스) 결제 테스트",
+                        "토스페이(직연동) 결제 테스트",
+                        "PAYCO 결제 테스트",
+                        "삼성페이 결제 테스트",
+                        "휴대폰 결제 테스트",
+                        "정기구독 결제 테스트",
+                        "톡체크아웃 결제 테스트",
+                        "결제 실패 시나리오 테스트"
+                    ],
+                    "related_features": ["결제", "신용카드", "간편결제", "주문", "PG"],
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+            ]
+            st.session_state.test_cases = sample_cases
+            save_test_cases_to_file(st.session_state.test_cases)
+            st.success("✅ 샘플 테스트 케이스가 로드되었습니다.")
+            st.rerun()
         
         st.markdown("---")
         
         # 테스트 케이스 요약
         st.subheader(f"📋 저장된 테스트 케이스")
         st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
+        
+        # JSON 다운로드 버튼 추가
+        if st.session_state.test_cases:
+            json_data = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
+            st.download_button(
+                label="📥 JSON 파일 다운로드",
+                data=json_data,
+                file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                use_container_width=True
+            )
         
         if st.session_state.test_cases:
             categories = {}
@@ -406,6 +448,7 @@ with st.sidebar:
                 for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
                     st.write(f"**{cat}**: {count}개")
             
+            # 기본값 접힌 상태(expanded=False)
             with st.expander("📝 전체 테스트 케이스 보기", expanded=False):
                 for tc in st.session_state.test_cases:
                     if 'structured_data' in tc:
@@ -417,20 +460,109 @@ with st.sidebar:
                         header = f"[{tc['category']}] {tc['name']}"
                         
                     with st.expander(header, expanded=False):
-                        if 'structured_data' in tc:
-                            st.write(f"**NO:** {data.get('no', '')}")
-                            st.write(f"**CATEGORY:** {data.get('category', '')}")
-                            st.write(f"**STEP:** {data.get('step', '')}")
-                        else:
-                            st.write(f"**설명:** {tc['description']}")
+                       # 🆕 편집 모드인 경우 편집 폼 표시
+                        if st.session_state.editing_test_case_id == tc['id']:
+                            st.markdown("### ✏️ 테스트 케이스 수정")
                             
-                        if st.button(f"삭제", key=f"delete_tc_{tc['id']}"):
-                            st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
-                            save_test_cases_to_file(st.session_state.test_cases)
-                            st.rerun()
+                            # 기존 데이터 가져오기
+                            if 'structured_data' in tc:
+                                data = tc['structured_data']
+                                edit_no = st.text_input("NO", value=data.get('no', ''), key=f"edit_no_{tc['id']}")
+                                edit_category = st.text_input("CATEGORY *", value=data.get('category', ''), key=f"edit_cat_{tc['id']}")
+                                edit_depth1 = st.text_input("DEPTH 1 *", value=data.get('depth1', ''), key=f"edit_d1_{tc['id']}")
+                                edit_depth2 = st.text_input("DEPTH 2", value=data.get('depth2', ''), key=f"edit_d2_{tc['id']}")
+                                edit_depth3 = st.text_input("DEPTH 3", value=data.get('depth3', ''), key=f"edit_d3_{tc['id']}")
+                                edit_pre_condition = st.text_area("PRE-CONDITION", value=data.get('pre_condition', ''), key=f"edit_pre_{tc['id']}")
+                                edit_step = st.text_area("STEP", value=data.get('step', ''), height=150, key=f"edit_step_{tc['id']}")
+                                edit_expect = st.text_area("EXPECT RESULT", value=data.get('expect_result', ''), key=f"edit_exp_{tc['id']}")
+                            else:
+                                edit_category = st.text_input("CATEGORY *", value=tc.get('category', ''), key=f"edit_cat_{tc['id']}")
+                                edit_name = st.text_input("NAME *", value=tc.get('name', ''), key=f"edit_name_{tc['id']}")
+                                edit_description = st.text_area("DESCRIPTION", value=tc.get('description', ''), height=150, key=f"edit_desc_{tc['id']}")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("💾 저장", key=f"save_edit_{tc['id']}", type="primary"):
+                                    # 테스트 케이스 업데이트
+                                    if 'structured_data' in tc:
+                                        tc['category'] = edit_category
+                                        tc['name'] = f"{edit_category} - {edit_depth1}" + (f" - {edit_depth2}" if edit_depth2 else "")
+                                        tc['structured_data'] = {
+                                            "no": edit_no,
+                                            "category": edit_category,
+                                            "depth1": edit_depth1,
+                                            "depth2": edit_depth2,
+                                            "depth3": edit_depth3,
+                                            "pre_condition": edit_pre_condition,
+                                            "step": edit_step,
+                                            "expect_result": edit_expect
+                                        }
+                                        tc['description'] = f"NO: {edit_no}\nCATEGORY: {edit_category}\nDEPTH1: {edit_depth1}\nDEPTH2: {edit_depth2}\nDEPTH3: {edit_depth3}\nPRE-CONDITION: {edit_pre_condition}\nSTEP: {edit_step}\nEXPECT RESULT: {edit_expect}"
+                                    else:
+                                        tc['category'] = edit_category
+                                        tc['name'] = edit_name
+                                        tc['description'] = edit_description
+                                    
+                                    save_test_cases_to_file(st.session_state.test_cases)
+                                    st.session_state.editing_test_case_id = None
+                                    st.success("✅ 저장되었습니다!")
+                                    st.rerun()
+                            
+                            with col2:
+                                if st.button("❌ 취소", key=f"cancel_edit_{tc['id']}"):
+                                    st.session_state.editing_test_case_id = None
+                                    st.rerun()
+                        
+                        # 일반 보기 모드
+                        else:
+                            if 'structured_data' in tc:
+                                data = tc['structured_data']
+                                st.write(f"**NO:** {data.get('no', '')}")
+                                st.write(f"**CATEGORY:** {data.get('category', '')}")
+                                st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
+                                if data.get('depth2'):
+                                    st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
+                                if data.get('depth3'):
+                                    st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
+                                if data.get('pre_condition'):
+                                    st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
+                                st.write(f"**STEP:** {data.get('step', '')}")
+                                st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
+                            else:
+                                st.write(f"**설명:** {tc['description']}")
+                                st.write(f"**스텝:** {tc ['steps']}")
+                                st.write(f"**해시태그:** {tc ['related_features']}")                                
+                                
+                            
+                            # 🆕 수정/삭제 버튼
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("✏️ 수정", key=f"edit_tc_{tc['id']}"):
+                                    st.session_state.editing_test_case_id = tc['id']
+                                    st.rerun()
+                            with col2:
+                                if st.button("🗑️ 삭제", key=f"delete_tc_{tc['id']}"):
+                                    st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
+                                    save_test_cases_to_file(st.session_state.test_cases)
+                                    st.success("✅ 삭제되었습니다!")
+                                    st.rerun()
+
+
+                        
+                        #if 'structured_data' in tc:
+                            #st.write(f"**NO:** {data.get('no', '')}")
+                            #st.write(f"**CATEGORY:** {data.get('category', '')}")
+                            #st.write(f"**STEP:** {data.get('step', '')}")
+                        #else:
+                            #st.write(f"**설명:** {tc['description']}")
+                            
+                        #if st.button(f"삭제", key=f"delete_tc_{tc['id']}"):
+                            #st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
+                            #save_test_cases_to_file(st.session_state.test_cases)
+                            #st.rerun()
     
     # ============================================
-    # 🆕 탭 2: 기획 문서 추가 (신규)
+    # 탭 2: 기획 문서 추가
     # ============================================
     with tab2:
         with st.expander("➕ [QA팀 전용 버튼]\n기획 문서 추가", expanded=False):
@@ -447,7 +579,7 @@ with st.sidebar:
             # 문서 유형
             doc_type = st.selectbox(
                 "문서 유형",
-                ["Notion", "Jira", "Confluence", "Google Docs", "기타"],
+                ["Notion", "Jira", "기타"],
                 key="spec_type"
             )
             
@@ -482,19 +614,94 @@ with st.sidebar:
         st.subheader(f"📄 저장된 기획 문서")
         st.metric("전체 문서 수", f"{len(st.session_state.spec_docs)}개")
         
+        # 🆕 JSON 다운로드 버튼 추가
+        if st.session_state.spec_docs:
+            json_data = json.dumps(st.session_state.spec_docs, ensure_ascii=False, indent=2)
+            st.download_button(
+                label="📥 JSON 파일 다운로드",
+                data=json_data,
+                file_name=f"spec_docs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                use_container_width=True
+            )
+        
         if st.session_state.spec_docs:
             with st.expander("📝 전체 기획 문서 보기", expanded=False):
                 for doc in st.session_state.spec_docs:
                     with st.expander(f"[{doc['doc_type']}] {doc['title']}", expanded=False):
-                        st.write(f"**작성일:** {doc['created_at']}")
-                        st.write(f"**내용 미리보기:**")
-                        preview = doc['content'][:200] + "..." if len(doc['content']) > 200 else doc['content']
-                        st.text(preview)
+                        # 🆕 편집 모드인 경우 편집 폼 표시
+                        if st.session_state.editing_spec_doc_id == doc['id']:
+                            st.markdown("### ✏️ 기획 문서 수정")
+                            
+                            edit_title = st.text_input("문서 제목 *", value=doc['title'], key=f"edit_spec_title_{doc['id']}")
+                            edit_type = st.selectbox("문서 유형", ["Notion", "Jira", "기타"], index=["Notion", "Jira", "기타"].index(doc['doc_type']), key=f"edit_spec_type_{doc['id']}")
+                            edit_content = st.text_area("문서 내용 *", value=doc['content'], height=300, key=f"edit_spec_content_{doc['id']}")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("💾 저장", key=f"save_spec_edit_{doc['id']}", type="primary"):
+                                    doc['title'] = edit_title
+                                    doc['doc_type'] = edit_type
+                                    doc['content'] = edit_content
+                                    
+                                    save_spec_docs_to_file(st.session_state.spec_docs)
+                                    st.session_state.editing_spec_doc_id = None
+                                    st.success("✅ 저장되었습니다!")
+                                    st.rerun()
+                            
+                            with col2:
+                                if st.button("❌ 취소", key=f"cancel_spec_edit_{doc['id']}"):
+                                    st.session_state.editing_spec_doc_id = None
+                                    st.rerun()
                         
-                        if st.button(f"삭제", key=f"delete_spec_{doc['id']}"):
-                            st.session_state.spec_docs = [d for d in st.session_state.spec_docs if d['id'] != doc['id']]
-                            save_spec_docs_to_file(st.session_state.spec_docs)
-                            st.rerun()
+                        # 일반 보기 모드
+                        else:
+                            st.write(f"**작성일:** {doc['created_at']}")
+                            st.write(f"**내용 미리보기:**")
+                            preview = doc['content'][:200] + "..." if len(doc['content']) > 200 else doc['content']
+                            st.text(preview)
+                            
+                            # 🆕 수정/삭제 버튼
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("✏️ 수정", key=f"edit_spec_{doc['id']}"):
+                                    st.session_state.editing_spec_doc_id = doc['id']
+                                    st.rerun()
+                            with col2:
+                                if st.button("🗑️ 삭제", key=f"delete_spec_{doc['id']}"):
+                                    st.session_state.spec_docs = [d for d in st.session_state.spec_docs if d['id'] != doc['id']]
+                                    save_spec_docs_to_file(st.session_state.spec_docs)
+                                    st.success("✅ 삭제되었습니다!")
+                                    st.rerun()
+
+                        
+                        #st.write(f"**작성일:** {doc['created_at']}")
+                        #st.write(f"**내용 미리보기:**")
+                        #preview = doc['content'][:200] + "..." if len(doc['content']) > 200 else doc['content']
+                        #st.text(preview)
+                        
+                        #if st.button(f"삭제", key=f"delete_spec_{doc['id']}"):
+                            #st.session_state.spec_docs = [d for d in st.session_state.spec_docs if d['id'] != doc['id']]
+                            #save_spec_docs_to_file(st.session_state.spec_docs)
+                            #st.rerun()
+
+    st.markdown("---")
+    
+    # 사용 가능한 모델 확인 버튼 (사이드바 하단)
+    with st.expander("🔧 개발자 도구", expanded=False):
+        if st.button("🔍 사용 가능한 Gemini 모델 확인"):
+            try:
+                import google.generativeai as genai
+                api_key = os.environ.get("GOOGLE_API_KEY")
+                genai.configure(api_key=api_key)
+            
+                models = genai.list_models()
+                st.write("### 사용 가능한 모델 목록:")
+                for model in models:
+                    if 'generateContent' in model.supported_generation_methods:
+                        st.write(f"✅ {model.name}")
+            except Exception as e:
+                st.error(f"오류: {str(e)}")
 
 # 메인 영역
 col1, col2 = st.columns([2, 1])
@@ -530,19 +737,22 @@ with col1:
                         
                         # AI 프롬프트 생성
                         prompt = f"""[역할 부여]
-너는 나와 같이 IT SaaS에 다니는 QA 전문가, QA 엔지니어로 일하고 있어.
+너는 나와 같이 IT SaaS에 다니고 있는 QA 전문가, QA 엔지니어야.
 (1) 테스트 설계, 테스트 케이스 작성 
 (2) 자동화 구현 (우선 모니터링용으로) 
 (3) 서비스 안정성 기여. 리그레이션을 중점으로 일해.
 
 꼼꼼함이 제일 중요해
 확실하지 않은 정보는 '추정' 또는 '불확실'하다고 명시하고, 최신 정보가 필요한 경우 그렇게 알려줘.
+혹시나 실제 고객, 회원 이름이 들어간 문서가 있다면, 실제 이름 대신 'Customer A, B, C'를 사용해. 또는 '홍길동', '김영희'와 같은 가명을 사용해줘.
+개인정보나 기밀 정보는 일반화하여 처리해.
 
 [제품 정보]
 확인하는 제품은 노코드 웹 빌더 시스템이야.
 1. IO: 서비스 메인 페이지. 사용자는 회원가입, 로그인을 하고 본인 소유 사이트를 관리하는 페이지
-2. BO: Back Office. 사이트 관리자가 접속해서 사이트를 관리하는 공간 (쇼핑몰 세팅, 예약 기능 세팅, 컨텐츠 관리 등)
-3. FO: Front Office. 실제 사이트 방문자(엔드유저)가 상품을 보고 구매하거나, 예약하거나, 게시글을 보는 곳
+2. BO: Back Office. 사이트 관리자가 접속해서 사이트를 관리하는 공간 (쇼핑몰 세팅, 예약 기능 세팅, 컨텐츠 관리 등). 관리자 페이지에서 '디자인 모드'에 접속할 수 있어.
+3. DM: 디자인 모드(Design Mode). 사이트 관리자가 접속해서 사이트를 디자인하는 공간 (상품 상세페이지 디자인 설정, 메뉴 추가/삭제, 메뉴 안에 위젯 추가/삭제 등)
+4. FO: Front Office. 실제 사이트 방문자(엔드유저)가 상품을 보고 구매하거나, 예약하거나, 게시글을 보는 곳
 
 [현재 요청]
 사용자가 "{search_query}"에 대한 테스트를 하려고 합니다.
@@ -743,4 +953,8 @@ st.markdown("""
 2. **검색창**에 테스트하고 싶은 기능을 입력하세요
 3. **AI가 자동으로** 기존 데이터를 학습하여 신규 테스트 케이스를 생성합니다
 4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel로 다운로드할 수 있습니다
+
+### 💾 데이터 백업
+- JSON 다운로드 버튼으로 테스트 케이스와 기획 문서를 정기적으로 백업할 수 있습니다.
+- 앱 재배포 시 데이터가 초기화될 수 있습니다.
 """)
