@@ -810,8 +810,7 @@ with col1:
                         if relevant_docs:  # 기존: if st.session_state.spec_docs:
                             spec_docs_str = "\n\n=== 관련 기획 문서 ===\n"
                             for doc in relevant_docs:  # 기존: st.session_state.spec_docs
-                                
-                                spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{content}\n\n---\n"
+                                spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{doc['content']}\n\n---\n"
                         
                         prompt = f"""[역할 부여]
 너는 나와 같이 IT SaaS에 다니고 있는 QA 전문가, QA 엔지니어야.
