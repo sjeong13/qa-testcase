@@ -621,8 +621,6 @@ with st.sidebar:
                                 if tc.get('related_features'):
                                     st.write(f"**관련 기능:** {', '.join(tc['related_features'])}")
                             
-                            st.caption(f"📅 작성일: {tc.get('created_at', 'N/A')}")
-                            
                             # 수정/삭제 버튼
                             col1, col2 = st.columns(2)
                             with col1:
