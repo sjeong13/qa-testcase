@@ -195,6 +195,10 @@ with st.sidebar:
                         'EXPECT RESULT': ['']
                     })
                     st.rerun()
+
+            # 데이터 에디터를 위한 고유 키 생성
+            if 'editor_key' not in st.session_state:
+                st.session_state.editor_key = 0
             
             # 데이터 에디터 표시
             edited_df = st.data_editor(
@@ -212,8 +216,14 @@ with st.sidebar:
                     "STEP": st.column_config.TextColumn("STEP", width="large", help="수행 단계"),
                     "EXPECT RESULT": st.column_config.TextColumn("EXPECT RESULT", width="large", help="예상 결과"),
                 },
-                key="test_case_editor"
+                # key="test_case_editor"
+                key=f"test_case_editor_{st.session_state.editor_key}"  # 동적 키 사용
             )
+            # 변경사항 즉시 반영
+            if not edited_df.equals(st.session_state.edit_df):
+                st.session_state.edit_df = edited_df.copy()
+                st.session_state.editor_key += 1  # 키 업데이트로 강제 리프레시
+                st.rerun()
             
             st.session_state.edit_df = edited_df
             
@@ -307,7 +317,7 @@ with st.sidebar:
             
             tc_free_content = st.text_area(
                 "내용 *",
-                placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n예: 1. BO에서 쿠폰 생성\n 2. 특정 회원에게 쿠폰 지정 발행\n 3. FO에서 쿠폰 사용 가능 여부 확인\n...",
+                placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n[예시]\n1. BO에서 쿠폰 생성\n2. 특정 회원에게 쿠폰 지정 발행\n3. FO에서 쿠폰 사용 가능 여부 확인\n...",
                 height=300,
                 key="tab1_tc_free_content"
             )
@@ -315,7 +325,7 @@ with st.sidebar:
             # 🆕 추가: 카테고리 선택
             tc_free_category = st.text_input(
                 "카테고리",
-                placeholder="예: 쿠폰",
+                placeholder="쿠폰",
                 key="tab1_tc_free_category"
             )
             
@@ -933,7 +943,7 @@ with col2:
 # 하단 정보
 st.markdown("---")
 st.markdown("""
-## 💡 사용 방법
+#### 💡 사용 방법
 1. **학습 데이터 추가 (사이드바)**
    - 📝 테스트 케이스: 기존 테스트 케이스를 표/CSV/Excel로 추가
    - 📚 기획 문서: 노션, Jira 등에서 기획 문서를 복사해서 추가
@@ -942,7 +952,7 @@ st.markdown("""
 4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel로 다운로드할 수 있습니다
 
 
-## 💾 데이터 백업
+#### 💾 데이터 백업
 - JSON 다운로드 버튼으로 테스트 케이스와 기획 문서를 정기적으로 백업할 수 있습니다.
 - 앱 재배포 시 데이터가 초기화될 수 있습니다.
 """)
