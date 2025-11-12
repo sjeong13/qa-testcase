@@ -1015,7 +1015,6 @@ with col2:
         for i, history in enumerate(reversed(st.session_state.search_history[-5:]), 1):
             with st.expander(f"{history['timestamp'][:10]} - {history['query'][:20]}...", expanded=(i==1)):
                 st.write(f"**검색어:** {history['query']}")
-                st.write(f"**시간(UTC):** {history['timestamp']}")
                 existing_count = len(history['response'].get('existing_test_cases', []))
                 new_count = len(history['response'].get('new_test_cases', []))
                 st.write(f"**기존 테스트:** {existing_count}개")
