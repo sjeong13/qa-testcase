@@ -1,7 +1,7 @@
 # ============================================
 #2025-11-10 : 비밀번호 인증 기능 추가
 #2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
-#2025-11-12 : JSON 파싱 오류 개선 (간헐적)
+#2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
 # ============================================
 import streamlit as st
 import json
@@ -30,6 +30,60 @@ def get_gemini_client():
     genai.configure(api_key=api_key)
     return genai.GenerativeModel('models/gemini-2.5-flash')
     # return genai.GenerativeModel('models/gemini-2.5-pro') # 품질 중요시
+
+# 속도 향상을 위한 함수 추가
+def find_relevant_test_cases(query, test_cases, top_k=50): #기본값 50
+    """사용자 쿼리와 관련 있는 테스트 케이스만 선별"""
+    query_lower = query.lower()
+    query_keywords = set(query_lower.split())
+    
+    scored_cases = []
+    for tc in test_cases:
+        # 관련도 점수 계산
+        score = 0
+        text = f"{tc.get('name', '')} {tc.get('description', '')} {tc.get('category', '')}".lower()
+        
+        # 키워드 매칭
+        for keyword in query_keywords:
+            if len(keyword) > 1:  # 1글자 제외
+                score += text.count(keyword) * 2
+        
+        # 카테고리 정확 매칭 가산점
+        if tc.get('category', '').lower() in query_lower:
+            score += 10
+        
+        # related_features 매칭
+        for feature in tc.get('related_features', []):
+            if feature.lower() in query_lower:
+                score += 5
+        
+        if score > 0:
+            scored_cases.append((score, tc))
+    
+    # 점수 높은 순으로 정렬 후 상위 k개 반환
+    scored_cases.sort(reverse=True, key=lambda x: x[0])
+    return [tc for score, tc in scored_cases[:top_k]]
+
+def find_relevant_spec_docs(query, spec_docs, top_k=30): #기본값 30
+    """사용자 쿼리와 관련 있는 기획 문서만 선별"""
+    query_lower = query.lower()
+    query_keywords = set(query_lower.split())
+    
+    scored_docs = []
+    for doc in spec_docs:
+        score = 0
+        text = f"{doc.get('title', '')} {doc.get('content', '')}".lower()
+        
+        for keyword in query_keywords:
+            if len(keyword) > 1:
+                score += text.count(keyword)
+        
+        if score > 0:
+            scored_docs.append((score, doc))
+    
+    scored_docs.sort(reverse=True, key=lambda x: x[0])
+    return [doc for score, doc in scored_docs[:top_k]]
+
 
 # JSON 파일 경로
 TEST_CASES_FILE = "test_cases.json"
@@ -366,7 +420,6 @@ with st.sidebar:
                         "로그인/가입 모달 사용 OFF 설정하여 동작 확인",
                     ],
                     "related_features": ["회원가입", "로그인", "주문", "가입", "구매"],
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 },
                 {
                     "id": 2,
@@ -384,7 +437,6 @@ with st.sidebar:
 
                     ],
                     "related_features": ["회원가입", "이메일", "소셜로그인", "카카오", "구글", "페이스북", "네이버", "애플", "라인" "로그인", "주문", "가입", "구매"],
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 },
                 {
                     "id": 3,
@@ -397,7 +449,6 @@ with st.sidebar:
                         "'BO 환경설정 > 회원가입·그룹·등급에서 사용자 추가' 기능 사용 > 엔드유저가 FO에서 사용자가 추가한 회원 유형으로 회원가입 완료"
                     ],
                     "related_features": ["회원가입", "일반회원", "사업자회원", "가입", "주문", "구매", "가입유형"],
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 },
                 {
                     "id": 4,
@@ -409,7 +460,6 @@ with st.sidebar:
                         "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 상태 확인 > 주문서로 이동 > 주문 완료]",
                     ],
                     "related_features": ["주문", "회원", "장바구니", "결제", "구매", "상품 상세페이지"],
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 },
                 {
                     "id": 5,
@@ -423,7 +473,6 @@ with st.sidebar:
                         "상품 상세페이지에서 장바구니 담기 > 장바구니 페이지에서 [주문하기] 버튼 클릭 > 로그인 페이지 또는 로그인 모달에서 [비회원 주문] 버튼 클릭 > 주문서로 이동 > 주문 완료]",
                     ],
                     "related_features": ["주문", "비회원", "장바구니", "결제", "구매", "상품 상세페이지"],
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 },
                 {
                     "id": 6,
@@ -448,7 +497,6 @@ with st.sidebar:
                         "결제 실패 시나리오 테스트"
                     ],
                     "related_features": ["결제", "신용카드", "간편결제", "주문", "PG"],
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
             ]
             st.session_state.test_cases = sample_cases
@@ -742,19 +790,33 @@ with col1:
                     client = get_gemini_client()
                     
                     if client:
-                        test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
+                        # test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
+                        # 속도 향상 - 관련 데이터만 필터링
+                        relevant_cases = find_relevant_test_cases(
+                            search_query, 
+                            st.session_state.test_cases, 
+                            top_k=50  # 상위 50개만 선택
+                        )
+                        relevant_docs = find_relevant_spec_docs(
+                            search_query,
+                            st.session_state.spec_docs,
+                            top_k=30  # 상위 30개 문서만
+                        )
+                        
+                        # 필터링된 데이터로 JSON 생성
+                        test_cases_str = json.dumps(relevant_cases, ensure_ascii=False, indent=2)
                         
                         spec_docs_str = ""
-                        if st.session_state.spec_docs:
-                            spec_docs_str = "\n\n=== 기획 문서 ===\n"
-                            for doc in st.session_state.spec_docs:
-                                spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{doc['content']}\n\n---\n"
+                        if relevant_docs:  # 기존: if st.session_state.spec_docs:
+                            spec_docs_str = "\n\n=== 관련 기획 문서 ===\n"
+                            for doc in relevant_docs:  # 기존: st.session_state.spec_docs
+                                
+                                spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{content}\n\n---\n"
                         
                         prompt = f"""[역할 부여]
 너는 나와 같이 IT SaaS에 다니고 있는 QA 전문가, QA 엔지니어야.
-(1) 테스트 설계, 테스트 케이스 작성 
-(2) 자동화 구현 (우선 모니터링용으로) 
-(3) 서비스 안정성 기여. 리그레이션을 중점으로 일해.
+(1) 테스트 설계, 테스트 케이스 작성, 자동화 업무 수행
+(3) 서비스 안정성 기여. 리그레이션을 중심 업무 수행
 
 꼼꼼함이 제일 중요해
 확실하지 않은 정보는 '추정' 또는 '불확실'하다고 명시하고, 최신 정보가 필요한 경우 그렇게 알려줘.
@@ -768,8 +830,8 @@ with col1:
 3. DM: 디자인 모드(Design Mode). 사이트 관리자가 접속해서 사이트를 디자인하는 공간 (상품 상세페이지 디자인 설정, 메뉴 추가/삭제, 메뉴 안에 위젯 추가/삭제 등)
 4. FO: Front Office. 실제 사이트 방문자(엔드유저)가 상품을 보고 구매하거나, 예약하거나, 게시글을 보는 곳
 
-[현재 요청]
-사용자가 "{search_query}"에 대한 테스트를 하려고 합니다.
+[요청]
+"{search_query}"에 대한 테스트 케이스 작성
 
 [학습 데이터]
 다음은 현재 시스템에 등록된 테스트 케이스들입니다:
@@ -816,9 +878,9 @@ with col1:
 ```
 
 중요: 
-1. 반드시 JSON 형식으로만 응답하세요.
-2. new_test_cases는 반드시 표 양식에 맞춰 작성하세요.
-3. 기획 문서의 맥락을 충분히 반영하세요."""
+1. 반드시 JSON 형식으로만 응답
+2. new_test_cases는 반드시 표 양식에 맞춰 작성
+3. 테스트 케이스와 기획 문서의 맥락을 충분히 반영할 것"""
 
                         try:
                             response = client.generate_content(prompt)
