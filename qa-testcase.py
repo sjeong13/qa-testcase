@@ -1,9 +1,7 @@
 # ============================================
-# 2025-11-10 : 비밀번호 인증 기능 추가
-# 2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
-# 2025-11-12
-    # JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
-    # "전체 보기" 새 탭 전용 뷰 + 저장 직후 표 미리보기 추가, 기존 테스트 활용 최초 접힘
+#2025-11-10 : 비밀번호 인증 기능 추가
+#2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
+#2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
 # ============================================
 import streamlit as st
 import json
@@ -12,9 +10,6 @@ import google.generativeai as genai
 import os
 import pandas as pd
 from io import BytesIO, StringIO
-
-# 새 탭 링크 생성
-from urllib.parse import urlencode
 
 # Excel 지원 확인
 try:
@@ -134,92 +129,6 @@ def save_spec_docs_to_file(spec_docs):
         st.error(f"기획 문서 저장 실패: {str(e)}")
         return False
 
-# 페이지 설정
-st.set_page_config(
-    page_title="테케봇 (QA Test Case Assistant)",
-    page_icon="👾",
-    layout="wide"
-)
-
-# "전체 보기" 새 탭 전용 뷰 라우팅 유틸 + 라우트
-# ------------------------------------------------------
-
-def _make_view_url(view_name: str) -> str:
-    return f"?{urlencode({'view': view_name})}"
-
-def _test_cases_to_df(cases: list) -> pd.DataFrame:
-    rows = []
-    for tc in cases:
-        if 'structured_data' in tc:
-            sd = tc['structured_data']
-            rows.append({
-                "ID": tc.get("id", ""),
-                "CATEGORY": sd.get("category", ""),
-                "DEPTH 1": sd.get("depth1", ""),
-                "DEPTH 2": sd.get("depth2", ""),
-                "DEPTH 3": sd.get("depth3", ""),
-                "PRE-CONDITION": sd.get("pre_condition", ""),
-                "STEP": sd.get("step", ""),
-                "EXPECT RESULT": sd.get("expect_result", ""),
-                "CREATED_AT": tc.get("created_at", ""),
-                "INPUT_TYPE": "표",
-                "NAME/TITLE": tc.get("name", "")
-            })
-        else:
-            rows.append({
-                "ID": tc.get("id", ""),
-                "CATEGORY": tc.get("category", ""),
-                "DEPTH 1": "",
-                "DEPTH 2": "",
-                "DEPTH 3": "",
-                "PRE-CONDITION": "",
-                "STEP": "",
-                "EXPECT RESULT": "",
-                "CREATED_AT": tc.get("created_at", ""),
-                "INPUT_TYPE": "줄글",
-                "NAME/TITLE": tc.get("name", "")
-            })
-    return pd.DataFrame(rows)
-
-def _spec_docs_to_df(docs: list) -> pd.DataFrame:
-    rows = []
-    for d in docs:
-        rows.append({
-            "ID": d.get("id", ""),
-            "TYPE": d.get("doc_type", ""),
-            "TITLE": d.get("title", ""),
-            "CREATED_AT": d.get("created_at", ""),
-            "CONTENT_PREVIEW": (d.get("content", "")[:200] + "...") if len(d.get("content", "")) > 200 else d.get("content", "")
-        })
-    return pd.DataFrame(rows)
-
-# 쿼리 파라미터로 전용 뷰 라우팅
-params = st.experimental_get_query_params()
-_current_view = (params.get("view", [""])[0] or "").strip()
-
-if _current_view == "all_test_cases":  # [CHANGED]
-    st.title("📋 전체 테스트 케이스")
-    # 세션 스테이트 초기화와 로드가 라우팅 뒤여도 안전하게 동작하도록 아래서 처리
-    if 'test_cases' not in st.session_state:
-        st.session_state.test_cases = load_test_cases_from_file()
-    df_all = _test_cases_to_df(st.session_state.test_cases)
-    if not df_all.empty:
-        st.dataframe(df_all, use_container_width=True, hide_index=True)
-    else:
-        st.info("저장된 테스트 케이스가 없습니다.")
-    st.stop()
-
-if _current_view == "all_spec_docs":
-    st.title("📄 전체 기획 문서")
-    if 'spec_docs' not in st.session_state:
-        st.session_state.spec_docs = load_spec_docs_from_file()
-    df_all = _spec_docs_to_df(st.session_state.spec_docs)
-    if not df_all.empty:
-        st.dataframe(df_all, use_container_width=True, hide_index=True)
-    else:
-        st.info("저장된 기획 문서가 없습니다.")
-    st.stop()
-
 # 세션 스테이트 초기화
 if 'test_cases' not in st.session_state:
     st.session_state.test_cases = load_test_cases_from_file()
@@ -237,14 +146,16 @@ if 'editing_test_case_id' not in st.session_state:
 if 'editing_spec_doc_id' not in st.session_state:
     st.session_state.editing_spec_doc_id = None
 
-# 이번 저장분 표 프리뷰를 위해 세션 키 추가
-if 'last_saved_batch_df' not in st.session_state:
-    st.session_state.last_saved_batch_df = None
+# 페이지 설정
+st.set_page_config(
+    page_title="테케봇 (QA Test Case Assistant)",
+    page_icon="👾",
+    layout="wide"
+)
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
-# 인증
 if not st.session_state.authenticated:
     st.title("🔒 테케봇 로그인")
     st.markdown("---")
@@ -310,8 +221,8 @@ with st.sidebar:
             st.markdown("**방법 1: 표에서 직접 입력/편집**")
             
             # 행 추가/삭제 버튼
-            col1_btn, col2_btn = st.columns([1, 1])
-            with col1_btn:
+            col1, col2 = st.columns([1, 1])
+            with col1:
                 if st.button("➕ 행 추가", key="add_row_tc"):
                     new_row = pd.DataFrame({
                         'NO': [''],
@@ -326,7 +237,7 @@ with st.sidebar:
                     st.session_state.edit_df = pd.concat([st.session_state.edit_df, new_row], ignore_index=True)
                     st.rerun()
             
-            with col2_btn:
+            with col2:
                 if st.button("🗑️ 모두 지우기", key="clear_tc"):
                     st.session_state.edit_df = pd.DataFrame({
                         'NO': [''],
@@ -360,6 +271,7 @@ with st.sidebar:
                     "STEP": st.column_config.TextColumn("STEP", width="large", help="수행 단계"),
                     "EXPECT RESULT": st.column_config.TextColumn("EXPECT RESULT", width="large", help="예상 결과"),
                 },
+                # key="test_case_editor"
                 key=f"test_case_editor_{st.session_state.editor_key}"  # 동적 키 사용
             )
             # 변경사항 즉시 반영
@@ -370,11 +282,10 @@ with st.sidebar:
             
             st.session_state.edit_df = edited_df
             
-            # 방법 1 저장: 이번 저장분 표 프리뷰
+            # 표 형식 저장 버튼
             if st.button("💾 표 형식 저장", type="primary", disabled=(len(edited_df) == 0), key="save_table_tc"):
                 if len(edited_df) > 0:
                     added_count = 0
-                    valid_rows = []
                     
                     for index, row in edited_df.iterrows():
                         if pd.isna(row['CATEGORY']) or row['CATEGORY'] == '' or pd.isna(row['DEPTH 1']) or row['DEPTH 1'] == '':
@@ -402,38 +313,24 @@ with st.sidebar:
                             }
                         }
                         st.session_state.test_cases.append(structured_test)
-
-                        # 저장분 표 프리뷰용 축약 행 추가
-                        valid_rows.append({
-                            'NO': no,
-                            'CATEGORY': str(row['CATEGORY']),
-                            'DEPTH 1': str(row['DEPTH 1']),
-                            'DEPTH 2': str(row.get('DEPTH 2', '')),
-                            'DEPTH 3': str(row.get('DEPTH 3', '')),
-                            'PRE-CONDITION': str(row.get('PRE-CONDITION', '')),
-                            'STEP': str(row.get('STEP', '')),
-                            'EXPECT RESULT': str(row.get('EXPECT RESULT', ''))
-                        })
                         added_count += 1
                     
                     if added_count > 0:
                         save_test_cases_to_file(st.session_state.test_cases)
-                        # 이번 저장분 표 미리보기 세션에 담기
-                        st.session_state.last_saved_batch_df = pd.DataFrame(valid_rows)
-
+                        st.session_state.edit_df = pd.DataFrame({
+                            'NO': [''],
+                            'CATEGORY': [''],
+                            'DEPTH 1': [''],
+                            'DEPTH 2': [''],
+                            'DEPTH 3': [''],
+                            'PRE-CONDITION': [''],
+                            'STEP': [''],
+                            'EXPECT RESULT': ['']
+                        })
                         st.success(f"✅ {added_count}개의 테스트 케이스가 추가되었습니다!")
-                        # 에디터는 유지 (원하면 비워도 됨)
+                        st.rerun()
                     else:
                         st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
-
-            # 저장 직후, 입력했던 표 그대로 미리보기
-            if st.session_state.last_saved_batch_df is not None and not st.session_state.last_saved_batch_df.empty:
-                with st.expander("👀 이번에 저장한 표 미리보기", expanded=True):  # [CHANGED]
-                    st.dataframe(
-                        st.session_state.last_saved_batch_df,
-                        use_container_width=True,
-                        hide_index=True
-                    )
             
             st.markdown("---")
             
@@ -463,7 +360,7 @@ with st.sidebar:
             
             st.markdown("---")
             
-            # ========== 방법 3: 줄글 형식 (자유 입력) ==========
+            # ========== 🆕 방법 3: 줄글 형식 (자유 입력) ==========
             st.markdown("**방법 3: 줄글 형식 (자유 입력)**")
             st.info("💡 테스트 케이스를 자유롭게 작성하고 AI가 학습할 수 있도록 저장하세요!")
             
@@ -475,19 +372,19 @@ with st.sidebar:
             
             tc_free_content = st.text_area(
                 "내용 *",
-                placeholder="테스트 설계를 자유롭게 작성하세요.\n\n[예시]\n1. BO에서 쿠폰 생성\n2. 특정 회원에게 쿠폰 지정 발행\n3. FO에서 쿠폰 사용 가능 여부 확인\n...",
+                placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n[예시]\n1. BO에서 쿠폰 생성\n2. 특정 회원에게 쿠폰 지정 발행\n3. FO에서 쿠폰 사용 가능 여부 확인\n...",
                 height=300,
                 key="tab1_tc_free_content"
             )
             
-            # 카테고리 선택
+            # 🆕 추가: 카테고리 선택
             tc_free_category = st.text_input(
                 "카테고리",
                 placeholder="쿠폰",
                 key="tab1_tc_free_category"
             )
             
-            # 저장 버튼 및 로직
+            # 🆕 추가: 저장 버튼 및 로직
             if st.button("💾 줄글 형식 저장", type="primary", key="tab1_save_free_form_tc"):
                 if not tc_free_title or not tc_free_content:
                     st.warning("⚠️ 제목과 내용은 필수입니다!")
@@ -506,7 +403,7 @@ with st.sidebar:
                     st.session_state.test_cases.append(free_form_test)
                     save_test_cases_to_file(st.session_state.test_cases)
                     st.success(f"✅ '{tc_free_title}' 테스트 케이스가 저장되었습니다!")
-                    # 줄글 저장은 표 프리뷰에 포함하지 않음(원하면 DF 구성 가능)
+                    st.rerun()
         
         # 샘플 데이터 로드
         if st.button("📋 샘플 테스트 케이스 로드"):
@@ -613,9 +510,6 @@ with st.sidebar:
         st.subheader(f"📋 저장된 테스트 케이스")
         st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
         
-        # 새 탭으로 전체 보기 링크 추가
-        st.markdown(f'<a href="{_make_view_url("all_test_cases")}" target="_blank">🔎 전체 테스트 케이스 보기 (새 탭)</a>', unsafe_allow_html=True)
-        
         # JSON 다운로드 버튼
         if st.session_state.test_cases:
             json_data = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
@@ -637,7 +531,6 @@ with st.sidebar:
                 for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
                     st.write(f"**{cat}**: {count}개")
             
-            # (기존) 전체 테스트 케이스 보는 확장 UI는 유지 (새 탭용 전용 뷰가 있으므로 굳이 눌지 않아도 됨)
             with st.expander("📝 전체 테스트 케이스 보기", expanded=False):
                 for tc in st.session_state.test_cases:
                     # 헤더 생성
@@ -651,41 +544,95 @@ with st.sidebar:
                         header = f"[{tc['category']}] {tc['name']}"
                         input_type_badge = "📝 줄글" if tc.get('input_type') == 'free_form' else "📋 기타"
                     
+                    # 🆕 입력 방식 표시
                     with st.expander(f"{input_type_badge} {header}", expanded=False):
-                        if 'structured_data' in tc:
-                            data = tc['structured_data']
-                            st.write(f"**NO:** {data.get('no', '')}")
-                            st.write(f"**CATEGORY:** {data.get('category', '')}")
-                            st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
-                            if data.get('depth2'):
-                                st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
-                            if data.get('depth3'):
-                                st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
-                            if data.get('pre_condition'):
-                                st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
-                            st.write(f"**STEP:** {data.get('step', '')}")
-                            st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
-                        else:
-                            st.write(f"**제목:** {tc['name']}")
-                            st.write(f"**내용:**")
-                            st.text(tc['description'])
-                            if tc.get('steps'):
-                                st.write(f"**주요 단계:** {', '.join(tc['steps'])}")
-                            if tc.get('related_features'):
-                                st.write(f"**관련 기능:** {', '.join(tc['related_features'])}")
+                        # 편집 모드
+                        if st.session_state.editing_test_case_id == tc['id']:
+                            st.markdown("### ✏️ 테스트 케이스 수정")
+                            
+                            if 'structured_data' in tc:
+                                data = tc['structured_data']
+                                edit_no = st.text_input("NO", value=data.get('no', ''), key=f"edit_no_{tc['id']}")
+                                edit_category = st.text_input("CATEGORY *", value=data.get('category', ''), key=f"edit_cat_{tc['id']}")
+                                edit_depth1 = st.text_input("DEPTH 1 *", value=data.get('depth1', ''), key=f"edit_d1_{tc['id']}")
+                                edit_depth2 = st.text_input("DEPTH 2", value=data.get('depth2', ''), key=f"edit_d2_{tc['id']}")
+                                edit_depth3 = st.text_input("DEPTH 3", value=data.get('depth3', ''), key=f"edit_d3_{tc['id']}")
+                                edit_pre_condition = st.text_area("PRE-CONDITION", value=data.get('pre_condition', ''), key=f"edit_pre_{tc['id']}")
+                                edit_step = st.text_area("STEP", value=data.get('step', ''), height=150, key=f"edit_step_{tc['id']}")
+                                edit_expect = st.text_area("EXPECT RESULT", value=data.get('expect_result', ''), key=f"edit_exp_{tc['id']}")
+                            else:
+                                edit_category = st.text_input("CATEGORY *", value=tc.get('category', ''), key=f"edit_cat_{tc['id']}")
+                                edit_name = st.text_input("제목 *", value=tc.get('name', ''), key=f"edit_name_{tc['id']}")
+                                edit_description = st.text_area("내용", value=tc.get('description', ''), height=150, key=f"edit_desc_{tc['id']}")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("💾 저장", key=f"save_edit_{tc['id']}", type="primary"):
+                                    if 'structured_data' in tc:
+                                        tc['category'] = edit_category
+                                        tc['name'] = f"{edit_category} - {edit_depth1}" + (f" - {edit_depth2}" if edit_depth2 else "")
+                                        tc['structured_data'] = {
+                                            "no": edit_no,
+                                            "category": edit_category,
+                                            "depth1": edit_depth1,
+                                            "depth2": edit_depth2,
+                                            "depth3": edit_depth3,
+                                            "pre_condition": edit_pre_condition,
+                                            "step": edit_step,
+                                            "expect_result": edit_expect
+                                        }
+                                        tc['description'] = f"NO: {edit_no}\nCATEGORY: {edit_category}\nDEPTH1: {edit_depth1}\nDEPTH2: {edit_depth2}\nDEPTH3: {edit_depth3}\nPRE-CONDITION: {edit_pre_condition}\nSTEP: {edit_step}\nEXPECT RESULT: {edit_expect}"
+                                    else:
+                                        tc['category'] = edit_category
+                                        tc['name'] = edit_name
+                                        tc['description'] = edit_description
+                                    
+                                    save_test_cases_to_file(st.session_state.test_cases)
+                                    st.session_state.editing_test_case_id = None
+                                    st.success("✅ 저장되었습니다!")
+                                    st.rerun()
+                            
+                            with col2:
+                                if st.button("❌ 취소", key=f"cancel_edit_{tc['id']}"):
+                                    st.session_state.editing_test_case_id = None
+                                    st.rerun()
                         
-                        # 수정/삭제 버튼
-                        col1_tc, col2_tc = st.columns(2)
-                        with col1_tc:
-                            if st.button("✏️ 수정", key=f"edit_tc_{tc['id']}"):
-                                st.session_state.editing_test_case_id = tc['id']
-                                st.rerun()
-                        with col2_tc:
-                            if st.button("🗑️ 삭제", key=f"delete_tc_{tc['id']}"):
-                                st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
-                                save_test_cases_to_file(st.session_state.test_cases)
-                                st.success("✅ 삭제되었습니다!")
-                                st.rerun()
+                        # 일반 보기 모드
+                        else:
+                            if 'structured_data' in tc:
+                                data = tc['structured_data']
+                                st.write(f"**NO:** {data.get('no', '')}")
+                                st.write(f"**CATEGORY:** {data.get('category', '')}")
+                                st.write(f"**DEPTH 1:** {data.get('depth1', '')}")
+                                if data.get('depth2'):
+                                    st.write(f"**DEPTH 2:** {data.get('depth2', '')}")
+                                if data.get('depth3'):
+                                    st.write(f"**DEPTH 3:** {data.get('depth3', '')}")
+                                if data.get('pre_condition'):
+                                    st.write(f"**PRE-CONDITION:** {data.get('pre_condition', '')}")
+                                st.write(f"**STEP:** {data.get('step', '')}")
+                                st.write(f"**EXPECT RESULT:** {data.get('expect_result', '')}")
+                            else:
+                                st.write(f"**제목:** {tc['name']}")
+                                st.write(f"**내용:**")
+                                st.text(tc['description'])
+                                if tc.get('steps'):
+                                    st.write(f"**주요 단계:** {', '.join(tc['steps'])}")
+                                if tc.get('related_features'):
+                                    st.write(f"**관련 기능:** {', '.join(tc['related_features'])}")
+                            
+                            # 수정/삭제 버튼
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("✏️ 수정", key=f"edit_tc_{tc['id']}"):
+                                    st.session_state.editing_test_case_id = tc['id']
+                                    st.rerun()
+                            with col2:
+                                if st.button("🗑️ 삭제", key=f"delete_tc_{tc['id']}"):
+                                    st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
+                                    save_test_cases_to_file(st.session_state.test_cases)
+                                    st.success("✅ 삭제되었습니다!")
+                                    st.rerun()
     
     # ============================================
     # 📚 탭 2: 기획 문서 추가
@@ -740,9 +687,6 @@ with st.sidebar:
         st.subheader(f"📄 저장된 기획 문서")
         st.metric("전체 문서 수", f"{len(st.session_state.spec_docs)}개")
         
-        # 새 탭으로 전체 보기 링크 추가
-        st.markdown(f'<a href="{_make_view_url("all_spec_docs")}" target="_blank">🔎 전체 기획 문서 보기 (새 탭)</a>', unsafe_allow_html=True)
-        
         # JSON 다운로드 버튼
         if st.session_state.spec_docs:
             json_data = json.dumps(st.session_state.spec_docs, ensure_ascii=False, indent=2)
@@ -766,8 +710,8 @@ with st.sidebar:
                             edit_type = st.selectbox("문서 유형", ["Notion", "Jira", "기타"], index=["Notion", "Jira", "기타"].index(doc['doc_type']), key=f"edit_spec_type_{doc['id']}")
                             edit_content = st.text_area("문서 내용 *", value=doc['content'], height=300, key=f"edit_spec_content_{doc['id']}")
                             
-                            col1_s, col2_s = st.columns(2)
-                            with col1_s:
+                            col1, col2 = st.columns(2)
+                            with col1:
                                 if st.button("💾 저장", key=f"save_spec_edit_{doc['id']}", type="primary"):
                                     doc['title'] = edit_title
                                     doc['doc_type'] = edit_type
@@ -778,7 +722,7 @@ with st.sidebar:
                                     st.success("✅ 저장되었습니다!")
                                     st.rerun()
                             
-                            with col2_s:
+                            with col2:
                                 if st.button("❌ 취소", key=f"cancel_spec_edit_{doc['id']}"):
                                     st.session_state.editing_spec_doc_id = None
                                     st.rerun()
@@ -791,17 +735,34 @@ with st.sidebar:
                             st.text(preview)
                             
                             # 수정/삭제 버튼
-                            col1_s2, col2_s2 = st.columns(2)
-                            with col1_s2:
+                            col1, col2 = st.columns(2)
+                            with col1:
                                 if st.button("✏️ 수정", key=f"edit_spec_{doc['id']}"):
                                     st.session_state.editing_spec_doc_id = doc['id']
                                     st.rerun()
-                            with col2_s2:
+                            with col2:
                                 if st.button("🗑️ 삭제", key=f"delete_spec_{doc['id']}"):
                                     st.session_state.spec_docs = [d for d in st.session_state.spec_docs if d['id'] != doc['id']]
                                     save_spec_docs_to_file(st.session_state.spec_docs)
                                     st.success("✅ 삭제되었습니다!")
                                     st.rerun()
+    
+    st.markdown("---")
+    
+    # 개발자 도구
+    with st.expander("🔧 개발자 도구", expanded=False):
+        if st.button("🔍 사용 가능한 Gemini 모델 확인"):
+            try:
+                api_key = os.environ.get("GOOGLE_API_KEY")
+                genai.configure(api_key=api_key)
+            
+                models = genai.list_models()
+                st.write("### 사용 가능한 모델 목록:")
+                for model in models:
+                    if 'generateContent' in model.supported_generation_methods:
+                        st.write(f"✅ {model.name}")
+            except Exception as e:
+                st.error(f"오류: {str(e)}")
 
 # ============================================
 # 메인 영역 - AI 기반 테스트 케이스 추천
@@ -827,23 +788,26 @@ with col1:
                     client = get_gemini_client()
                     
                     if client:
+                        # test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
+                        # 속도 향상 - 관련 데이터만 필터링
                         relevant_cases = find_relevant_test_cases(
                             search_query, 
                             st.session_state.test_cases, 
-                            top_k=50
+                            top_k=50  # 상위 50개만 선택
                         )
                         relevant_docs = find_relevant_spec_docs(
                             search_query,
                             st.session_state.spec_docs,
-                            top_k=30
+                            top_k=30  # 상위 30개 문서만
                         )
                         
+                        # 필터링된 데이터로 JSON 생성
                         test_cases_str = json.dumps(relevant_cases, ensure_ascii=False, indent=2)
                         
                         spec_docs_str = ""
-                        if relevant_docs:
+                        if relevant_docs:  # 기존: if st.session_state.spec_docs:
                             spec_docs_str = "\n\n=== 관련 기획 문서 ===\n"
-                            for doc in relevant_docs:
+                            for doc in relevant_docs:  # 기존: st.session_state.spec_docs
                                 spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{doc['content']}\n\n---\n"
                         
                         prompt = f"""[역할 부여]
@@ -1025,17 +989,16 @@ with col1:
                                 st.markdown("### 💡 추가 제안 (Edge Cases)")
                                 st.warning(ai_response["additional_suggestions"])
 
-                            # 기존 테스트 케이스 활용
                             if ai_response.get("existing_test_cases"):
                                 st.markdown("### 📝 기존 테스트 케이스 활용")
-                                with st.expander("목록 펼치기", expanded=False):
-                                    for i, rec in enumerate(ai_response.get("existing_test_cases", []), 1):
-                                        test_case = next((tc for tc in st.session_state.test_cases if tc["id"] == rec["id"]), None)
-                                        
-                                        if test_case:
-                                            with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=False):
-                                                st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
-                                                st.markdown(f"**설명:** {test_case['description']}")
+                                
+                                for i, rec in enumerate(ai_response.get("existing_test_cases", []), 1):
+                                    test_case = next((tc for tc in st.session_state.test_cases if tc["id"] == rec["id"]), None)
+                                    
+                                    if test_case:
+                                        with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=False):
+                                            st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
+                                            st.markdown(f"**설명:** {test_case['description']}")
 
                         except Exception as e:
                             st.error(f"❌ AI 분석 중 오류가 발생했습니다: {str(e)}")
