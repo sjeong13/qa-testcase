@@ -823,20 +823,40 @@ with col1:
                             response = client.generate_content(prompt)
                             response_text = response.text
                             
+                            # 1. 마크다운 제거
                             if "```json" in response_text:
                                 json_str = response_text.split("```json")[1].split("```")[0].strip()
                             else:
                                 json_str = response_text.strip()
+
+                            # 2. 제어 문자 사전 제거 (파싱 전에 처리)
+                            import re
+                            json_str_cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', json_str)
                             
+                            
+                            # 3. JSON 파싱 시도
                             try:
-                                ai_response = json.loads(json_str)
-                            except json.JSONDecodeError as e:
-                                st.error(f"JSON 파싱 오류: {str(e)}")
-                                st.code(json_str[:500])
-                                
-                                import re
-                                json_str_cleaned = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', json_str)
                                 ai_response = json.loads(json_str_cleaned)
+                            except json.JSONDecodeError as e:
+                                st.error(f"❌ JSON 파싱 오류: {str(e)}")
+        
+                                # 디버깅용: 문제가 되는 부분 표시
+                                with st.expander("🔧 디버깅 정보 (개발자용)", expanded=False):
+                                    st.write(f"**오류 위치:** line {e.lineno}, column {e.colno}")
+                                    st.write(f"**오류 메시지:** {e.msg}")
+                                    st.code(json_str_cleaned[:1000], language="json")
+        
+                                # 4. 최종 fallback: 더 공격적인 정리
+                                try:
+                                    # 줄바꿈을 공백으로 치환
+                                    json_str_final = json_str_cleaned.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+                                    # 연속된 공백 제거
+                                    json_str_final = re.sub(r'\s+', ' ', json_str_final)
+                                    ai_response = json.loads(json_str_final)
+                                    st.warning("⚠️ JSON 파싱에 문제가 있어 일부 데이터가 손실되었을 수 있습니다.")
+                                except:
+                                    st.error("❌ AI 응답을 처리할 수 없습니다. 다시 시도해주세요.")
+                                    st.stop()
                             
                             st.session_state.search_history.append({
                                 "query": search_query,
@@ -849,19 +869,8 @@ with col1:
                             st.markdown("### 🧠 AI의 사고 과정")
                             st.info(ai_response.get("reasoning", "추론 과정 없음"))
                             
-                            if ai_response.get("existing_test_cases"):
-                                st.markdown("### 📝 기존 테스트 케이스 활용")
-                                
-                                for i, rec in enumerate(ai_response.get("existing_test_cases", []), 1):
-                                    test_case = next((tc for tc in st.session_state.test_cases if tc["id"] == rec["id"]), None)
-                                    
-                                    if test_case:
-                                        with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=False):
-                                            st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
-                                            st.markdown(f"**설명:** {test_case['description']}")
-                            
                             if ai_response.get("new_test_cases"):
-                                st.markdown("### 🆕 AI가 생성한 신규 테스트 케이스")
+                                st.markdown("### AI가 생성한 신규 테스트 케이스")
                                 
                                 df_data = []
                                 for tc in ai_response.get("new_test_cases", []):
@@ -919,7 +928,18 @@ with col1:
                             if ai_response.get("additional_suggestions"):
                                 st.markdown("### 💡 추가 제안 (Edge Cases)")
                                 st.warning(ai_response["additional_suggestions"])
-                            
+
+                            if ai_response.get("existing_test_cases"):
+                                st.markdown("### 📝 기존 테스트 케이스 활용")
+                                
+                                for i, rec in enumerate(ai_response.get("existing_test_cases", []), 1):
+                                    test_case = next((tc for tc in st.session_state.test_cases if tc["id"] == rec["id"]), None)
+                                    
+                                    if test_case:
+                                        with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=False):
+                                            st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
+                                            st.markdown(f"**설명:** {test_case['description']}")
+
                         except Exception as e:
                             st.error(f"❌ AI 분석 중 오류가 발생했습니다: {str(e)}")
             else:
