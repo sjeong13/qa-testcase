@@ -842,6 +842,8 @@ with col1:
                                 # 학습 데이터로 저장 버튼 추가
                                 with col2:
                                     if st.button("💾 학습시키기", type="primary", use_container_width=True):
+                                        # 🔧 저장 전 개수 (추가!)
+                                        before_count = len(st.session_state.test_cases)
                                         added_count = 0
             
                                         for tc in ai_response.get("new_test_cases", []):
@@ -883,7 +885,7 @@ with col1:
         
                                         # 🔧 잠시 기다렸다가 새로고침
                                         import time
-                                        time.sleep(1)
+                                        time.sleep(5)
                                         st.rerun()
 
 
