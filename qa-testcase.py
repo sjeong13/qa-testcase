@@ -789,9 +789,9 @@ with col1:
 
 
                             
-                            # ✅ 세션에 저장된 ai_response 사용
-                            if 'last_ai_response' in st.session_state:
-                                ai_response = st.session_state.last_ai_response
+                # ✅ 세션에 저장된 ai_response 사용
+                if 'last_ai_response' in st.session_state:
+                    ai_response = st.session_state.last_ai_response
 
 
                    
