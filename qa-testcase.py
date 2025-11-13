@@ -485,6 +485,24 @@ with st.sidebar:
                                     save_test_cases_to_file(st.session_state.test_cases)
                                     st.success("✅ 삭제되었습니다!")
                                     st.rerun()
+
+        
+    st.markdown("---")
+    
+    # 개발자 도구
+    with st.expander("🔧 개발자 도구", expanded=False):
+        if st.button("🔍 사용 가능한 Gemini 모델 확인"):
+            try:
+                api_key = os.environ.get("GOOGLE_API_KEY")
+                genai.configure(api_key=api_key)
+            
+                models = genai.list_models()
+                st.write("### 사용 가능한 모델 목록:")
+                for model in models:
+                    if 'generateContent' in model.supported_generation_methods:
+                        st.write(f"✅ {model.name}")
+            except Exception as e:
+                st.error(f"오류: {str(e)}")
     
     # ============================================
     # 📚 탭 2: 기획 문서 추가
@@ -606,23 +624,7 @@ with st.sidebar:
                                     save_spec_docs_to_file(st.session_state.spec_docs)
                                     st.success("✅ 삭제되었습니다!")
                                     st.rerun()
-    
-    st.markdown("---")
-    
-    # 개발자 도구
-    with st.expander("🔧 개발자 도구", expanded=False):
-        if st.button("🔍 사용 가능한 Gemini 모델 확인"):
-            try:
-                api_key = os.environ.get("GOOGLE_API_KEY")
-                genai.configure(api_key=api_key)
-            
-                models = genai.list_models()
-                st.write("### 사용 가능한 모델 목록:")
-                for model in models:
-                    if 'generateContent' in model.supported_generation_methods:
-                        st.write(f"✅ {model.name}")
-            except Exception as e:
-                st.error(f"오류: {str(e)}")
+
 
 # ============================================
 # 메인 영역 - AI 기반 테스트 케이스 추천
