@@ -638,14 +638,13 @@ with st.sidebar:
 # 🔧 디버그 정보 표시 (새로고침 후 항상 실행됨)
 if 'debug_info' in st.session_state and st.session_state.debug_info:
     info = st.session_state.debug_info
-    st.success(f"""
-    **💾 학습 데이터 저장 완료!**
-    - 저장 전: {info['before']}개
-    - 저장 후: {info['after']}개  
-    - 추가됨: {info['added']}개
-    - 파일 저장: {'✅ 성공' if info['save_result'] else '❌ 실패'}
-    """)
+    # ❌ 기존 multi-line string 대신
+    # ✅ 간단한 메시지로 변경
+    st.success(f"💾 {info['added']}개 저장 완료! (전: {info['before']}개 → 후: {info['after']}개)")
     st.session_state.debug_info = None
+else:
+    # 🔧 디버그용: debug_info가 없을 때도 표시
+    st.info("⏳ 저장 대기 중... (debug_info 없음)")
 
 
 
