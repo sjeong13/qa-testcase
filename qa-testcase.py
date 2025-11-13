@@ -853,7 +853,6 @@ with col1:
                                                 "description": f"NO: {tc.get('no', '')}\nCATEGORY: {tc.get('category', '')}\nDEPTH1: {tc.get('depth1', '')}\nDEPTH2: {tc.get('depth2', '')}\nDEPTH3: {tc.get('depth3', '')}\nPRE-CONDITION: {tc.get('pre_condition', '')}\nSTEP: {tc.get('step', '')}\nEXPECT RESULT: {tc.get('expect_result', '')}",
                                                 "steps": [tc.get('step', '')] if tc.get('step') else [],
                                                 "related_features": [x for x in [tc.get('category', ''), tc.get('depth1', ''), tc.get('depth2', ''), tc.get('depth3', '')] if x],
-                                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                                 "structured_data": {
                                                     "no": tc.get("no", ""),
                                                     "category": tc.get("category", ""),
