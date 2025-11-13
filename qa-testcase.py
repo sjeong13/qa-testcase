@@ -635,19 +635,6 @@ with st.sidebar:
 # 메인 영역 - AI 기반 테스트 케이스 추천
 # ============================================
 
-# 🔧 디버그 정보 표시 (새로고침 후 항상 실행됨)
-if 'debug_info' in st.session_state and st.session_state.debug_info:
-    info = st.session_state.debug_info
-    # ❌ 기존 multi-line string 대신
-    # ✅ 간단한 메시지로 변경
-    st.success(f"💾 {info['added']}개 저장 완료! (전: {info['before']}개 → 후: {info['after']}개)")
-    st.session_state.debug_info = None
-else:
-    # 🔧 디버그용: debug_info가 없을 때도 표시
-    st.info("⏳ 저장 대기 중... (debug_info 없음)")
-
-
-
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -890,20 +877,16 @@ with col1:
                                         # 🔧 저장 후 개수 확인
                                         after_count = len(st.session_state.test_cases)
 
-
-                                        # 🔧 세션 스테이트에 디버그 정보 저장 (rerun 후에도 보이게)
-                                        st.session_state.debug_info = {
-                                            "before": before_count,
-                                            "after": after_count,
-                                            "added": added_count
-                                        }
-        
                                         # JSON 파일에 저장
                                         save_result = save_test_cases_to_file(st.session_state.test_cases)
-                                        st.session_state.debug_info["save_result"] = save_result
-        
-                                        # 새로고침
-                                        st.rerun()
+
+                                        # ✅ 즉시 표시 (st.rerun() 없이)
+                                        if save_result:
+                                             st.success(f"✅ {added_count}개 저장 완료! (전: {before_count}개 → 후: {after_count}개)")
+                                             st.info("💡 왼쪽 사이드바를 확인하면 전체 케이스 수가 업데이트되었습니다!")
+                                        else:
+                                            st.error("❌ 저장 실패!")
+
 
 
                             
