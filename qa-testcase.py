@@ -778,6 +778,24 @@ with col1:
                             })
                             
                             st.success("✅ AI 분석이 완료되었습니다!")
+
+
+                            # 🔧 여기에 추가!
+                            if 'debug_info' in st.session_state and st.session_state.debug_info:
+                                info = st.session_state.debug_info
+                                st.info(f"""
+                                **💾 학습 데이터 저장 완료!**
+                                - 저장 전: {info['before']}개
+                                - 저장 후: {info['after']}개  
+                                - 추가됨: {info['added']}개
+                                - 파일 저장: {'✅ 성공' if info['save_result'] else '❌ 실패'}
+                                """)
+                                st.session_state.debug_info = None
+
+
+
+
+                            
                             
                             st.markdown("### 🧠 AI의 사고 과정")
                             st.info(ai_response.get("reasoning", "추론 과정 없음"))
@@ -874,32 +892,36 @@ with col1:
 
                                         # 🔧 저장 후 개수 확인
                                         after_count = len(st.session_state.test_cases)
-        
-                                        # 🔧 디버그 정보 출력
-                                        st.write(f"저장 전: {before_count}개")
-                                        st.write(f"저장 후: {after_count}개")
-                                        st.write(f"추가된 개수: {added_count}개")
+
+
+                                        # 🔧 세션 스테이트에 디버그 정보 저장 (rerun 후에도 보이게)
+                                        st.session_state.debug_info = {
+                                            "before": before_count,
+                                            "after": after_count,
+                                            "added": added_count
+                                        }
         
                                         # JSON 파일에 저장
                                         save_result = save_test_cases_to_file(st.session_state.test_cases)
-                                        st.write(f"파일 저장 결과: {save_result}")
+                                        st.session_state.debug_info["save_result"] = save_result
         
-                                        # 🔧 잠시 기다렸다가 새로고침
-                                        import time
-                                        time.sleep(5)
+                                        # 새로고침
                                         st.rerun()
 
+                                # 🔧 디버그 정보 표시 (rerun 후에 여기서 출력됨)
+                                if 'debug_info' in st.session_state and st.session_state.debug_info:
+                                    info = st.session_state.debug_info
+                                    st.info(f"""
+                                    **저장 완료!**
+                                    - 저장 전: {info['before']}개
+                                    - 저장 후: {info['after']}개  
+                                    - 추가됨: {info['added']}개
+                                    - 파일 저장: {'✅ 성공' if info['save_result'] else '❌ 실패'}
+                                    """)
+                                    # 한 번 보여주고 삭제
+                                    st.session_state.debug_info = None
 
 
-
-                                            
-            
-                                        # JSON 파일에 저장
-                                        if save_test_cases_to_file(st.session_state.test_cases):
-                                            st.success(f"✅ {added_count}개의 테스트 케이스가 학습 데이터에 추가되었습니다!")
-                                            st.rerun()
-                                        else:
-                                            st.error("❌ 저장에 실패했습니다.")
                             
                             if ai_response.get("test_order"):
                                 st.markdown("### 🔄 권장 테스트 순서")
