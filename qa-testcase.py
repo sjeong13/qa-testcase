@@ -863,10 +863,33 @@ with col1:
                                                     "step": tc.get("step", ""),
                                                     "expect_result": tc.get("expect_result", "")
                                                 },
-                                                "source": "AI_generated"  # 🆕 AI가 생성한 케이스임을 표시
+                                                "source": "AI_generated"  # AI가 생성한 케이스임을 표시
                                             }
                                             st.session_state.test_cases.append(structured_test)
                                             added_count += 1
+
+
+                                        # 🔧 저장 후 개수 확인
+                                        after_count = len(st.session_state.test_cases)
+        
+                                        # 🔧 디버그 정보 출력
+                                        st.write(f"저장 전: {before_count}개")
+                                        st.write(f"저장 후: {after_count}개")
+                                        st.write(f"추가된 개수: {added_count}개")
+        
+                                        # JSON 파일에 저장
+                                        save_result = save_test_cases_to_file(st.session_state.test_cases)
+                                        st.write(f"파일 저장 결과: {save_result}")
+        
+                                        # 🔧 잠시 기다렸다가 새로고침
+                                        import time
+                                        time.sleep(1)
+                                        st.rerun()
+
+
+
+
+                                            
             
                                         # JSON 파일에 저장
                                         if save_test_cases_to_file(st.session_state.test_cases):
