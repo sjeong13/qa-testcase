@@ -634,6 +634,21 @@ with st.sidebar:
 # ============================================
 # 메인 영역 - AI 기반 테스트 케이스 추천
 # ============================================
+
+# 🔧 디버그 정보 표시 (새로고침 후 항상 실행됨)
+if 'debug_info' in st.session_state and st.session_state.debug_info:
+    info = st.session_state.debug_info
+    st.success(f"""
+    **💾 학습 데이터 저장 완료!**
+    - 저장 전: {info['before']}개
+    - 저장 후: {info['after']}개  
+    - 추가됨: {info['added']}개
+    - 파일 저장: {'✅ 성공' if info['save_result'] else '❌ 실패'}
+    """)
+    st.session_state.debug_info = None
+
+
+
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -778,24 +793,7 @@ with col1:
                             })
                             
                             st.success("✅ AI 분석이 완료되었습니다!")
-
-
-                            # 🔧 여기에 추가!
-                            if 'debug_info' in st.session_state and st.session_state.debug_info:
-                                info = st.session_state.debug_info
-                                st.info(f"""
-                                **💾 학습 데이터 저장 완료!**
-                                - 저장 전: {info['before']}개
-                                - 저장 후: {info['after']}개  
-                                - 추가됨: {info['added']}개
-                                - 파일 저장: {'✅ 성공' if info['save_result'] else '❌ 실패'}
-                                """)
-                                st.session_state.debug_info = None
-
-
-
-
-                            
+                   
                             
                             st.markdown("### 🧠 AI의 사고 과정")
                             st.info(ai_response.get("reasoning", "추론 과정 없음"))
@@ -907,19 +905,6 @@ with col1:
         
                                         # 새로고침
                                         st.rerun()
-
-                                # 🔧 디버그 정보 표시 (rerun 후에 여기서 출력됨)
-                                if 'debug_info' in st.session_state and st.session_state.debug_info:
-                                    info = st.session_state.debug_info
-                                    st.info(f"""
-                                    **저장 완료!**
-                                    - 저장 전: {info['before']}개
-                                    - 저장 후: {info['after']}개  
-                                    - 추가됨: {info['added']}개
-                                    - 파일 저장: {'✅ 성공' if info['save_result'] else '❌ 실패'}
-                                    """)
-                                    # 한 번 보여주고 삭제
-                                    st.session_state.debug_info = None
 
 
                             
