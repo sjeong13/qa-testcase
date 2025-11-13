@@ -2,6 +2,7 @@
 #2025-11-10 : 비밀번호 인증 기능 추가
 #2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
 #2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
+#2025-11-13 : 속도 향상 개선 함수 제거
 # ============================================
 import streamlit as st
 import json
@@ -30,60 +31,6 @@ def get_gemini_client():
     genai.configure(api_key=api_key)
     return genai.GenerativeModel('models/gemini-2.5-flash')
     # return genai.GenerativeModel('models/gemini-2.5-pro') # 품질 중요시
-
-# 속도 향상을 위한 함수 추가
-def find_relevant_test_cases(query, test_cases, top_k=50): #기본값 50
-    """사용자 쿼리와 관련 있는 테스트 케이스만 선별"""
-    query_lower = query.lower()
-    query_keywords = set(query_lower.split())
-    
-    scored_cases = []
-    for tc in test_cases:
-        # 관련도 점수 계산
-        score = 0
-        text = f"{tc.get('name', '')} {tc.get('description', '')} {tc.get('category', '')}".lower()
-        
-        # 키워드 매칭
-        for keyword in query_keywords:
-            if len(keyword) > 1:  # 1글자 제외
-                score += text.count(keyword) * 2
-        
-        # 카테고리 정확 매칭 가산점
-        if tc.get('category', '').lower() in query_lower:
-            score += 10
-        
-        # related_features 매칭
-        for feature in tc.get('related_features', []):
-            if feature.lower() in query_lower:
-                score += 5
-        
-        if score > 0:
-            scored_cases.append((score, tc))
-    
-    # 점수 높은 순으로 정렬 후 상위 k개 반환
-    scored_cases.sort(reverse=True, key=lambda x: x[0])
-    return [tc for score, tc in scored_cases[:top_k]]
-
-def find_relevant_spec_docs(query, spec_docs, top_k=30): #기본값 30
-    """사용자 쿼리와 관련 있는 기획 문서만 선별"""
-    query_lower = query.lower()
-    query_keywords = set(query_lower.split())
-    
-    scored_docs = []
-    for doc in spec_docs:
-        score = 0
-        text = f"{doc.get('title', '')} {doc.get('content', '')}".lower()
-        
-        for keyword in query_keywords:
-            if len(keyword) > 1:
-                score += text.count(keyword)
-        
-        if score > 0:
-            scored_docs.append((score, doc))
-    
-    scored_docs.sort(reverse=True, key=lambda x: x[0])
-    return [doc for score, doc in scored_docs[:top_k]]
-
 
 # JSON 파일 경로
 TEST_CASES_FILE = "test_cases.json"
@@ -642,7 +589,7 @@ with st.sidebar:
             st.markdown("### 📄 기획 문서 입력")
             st.info("💡 노션, Jira에서 작성한 문서를 복사해서 붙여넣으세요.\nAI가 이 내용을 학습합니다!")
             
-            # 문서 제목 (key는 그대로 유지)
+            # 문서 제목
             doc_title = st.text_input(
                 "문서 제목 *",
                 placeholder="예: 공동구매 기능 스펙 문서",
@@ -651,9 +598,16 @@ with st.sidebar:
             
             # 문서 유형
             doc_type = st.selectbox(
-                "문서 유형",
+                "문서 유형 *",
                 ["Notion", "Jira", "기타"],
                 key="tab2_spec_type"
+            )
+
+            # 문서 유형
+            doc_link = st.text_input(
+                "링크 URL *",
+                placeholder="https://www.notion.so/imweb/...",
+                key="tab2_spec_link"
             )
             
             # 문서 내용
@@ -666,15 +620,15 @@ with st.sidebar:
             
             # 저장 버튼
             if st.button("💾 기획 문서 저장", type="primary", key="tab2_save_spec"):
-                if not doc_title or not doc_content:
-                    st.warning("⚠️ 문서 제목과 내용은 필수입니다!")
+                if not doc_title or not doc_type or not doc_link or not doc_content:
+                    st.warning("⚠️ 모든 항목을 필수로 입력해야 합니다!")
                 else:
                     new_spec = {
                         "id": len(st.session_state.spec_docs) + 1,
                         "title": doc_title,
                         "doc_type": doc_type,
+                        "link": doc_link,
                         "content": doc_content,
-                        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
                     st.session_state.spec_docs.append(new_spec)
                     save_spec_docs_to_file(st.session_state.spec_docs)
@@ -707,7 +661,8 @@ with st.sidebar:
                             st.markdown("### ✏️ 기획 문서 수정")
                             
                             edit_title = st.text_input("문서 제목 *", value=doc['title'], key=f"edit_spec_title_{doc['id']}")
-                            edit_type = st.selectbox("문서 유형", ["Notion", "Jira", "기타"], index=["Notion", "Jira", "기타"].index(doc['doc_type']), key=f"edit_spec_type_{doc['id']}")
+                            edit_type = st.selectbox("문서 유형 *", ["Notion", "Jira", "기타"], index=["Notion", "Jira", "기타"].index(doc['doc_type']), key=f"edit_spec_type_{doc['id']}")
+                            edit_link = st.text_input("링크 URL *", value=doc['link'], key=f"edit_spec_link_{doc['id']}")
                             edit_content = st.text_area("문서 내용 *", value=doc['content'], height=300, key=f"edit_spec_content_{doc['id']}")
                             
                             col1, col2 = st.columns(2)
@@ -715,6 +670,7 @@ with st.sidebar:
                                 if st.button("💾 저장", key=f"save_spec_edit_{doc['id']}", type="primary"):
                                     doc['title'] = edit_title
                                     doc['doc_type'] = edit_type
+                                    doc['link'] = edit_link
                                     doc['content'] = edit_content
                                     
                                     save_spec_docs_to_file(st.session_state.spec_docs)
@@ -729,7 +685,6 @@ with st.sidebar:
                         
                         # 일반 보기 모드
                         else:
-                            st.write(f"**작성일:** {doc['created_at']}")
                             st.write(f"**내용 미리보기:**")
                             preview = doc['content'][:200] + "..." if len(doc['content']) > 200 else doc['content']
                             st.text(preview)
@@ -788,26 +743,12 @@ with col1:
                     client = get_gemini_client()
                     
                     if client:
-                        # test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
-                        # 속도 향상 - 관련 데이터만 필터링
-                        relevant_cases = find_relevant_test_cases(
-                            search_query, 
-                            st.session_state.test_cases, 
-                            top_k=50  # 상위 50개만 선택
-                        )
-                        relevant_docs = find_relevant_spec_docs(
-                            search_query,
-                            st.session_state.spec_docs,
-                            top_k=30  # 상위 30개 문서만
-                        )
-                        
-                        # 필터링된 데이터로 JSON 생성
-                        test_cases_str = json.dumps(relevant_cases, ensure_ascii=False, indent=2)
+                        test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
                         
                         spec_docs_str = ""
-                        if relevant_docs:  # 기존: if st.session_state.spec_docs:
-                            spec_docs_str = "\n\n=== 관련 기획 문서 ===\n"
-                            for doc in relevant_docs:  # 기존: st.session_state.spec_docs
+                        if st.session_state.spec_docs:
+                            spec_docs_str = "\n\n=== 기획 문서 ===\n"
+                            for doc in st.session_state.spec_docs:
                                 spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{doc['content']}\n\n---\n"
                         
                         prompt = f"""[역할 부여]
