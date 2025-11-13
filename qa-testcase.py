@@ -486,11 +486,10 @@ with st.sidebar:
                                     st.success("✅ 삭제되었습니다!")
                                     st.rerun()
 
-        
-    st.markdown("---")
     
     # 개발자 도구
     with tab1:
+        st.markdown("---")
         with st.expander("🔧 개발자 도구", expanded=False):
             if st.button("🔍 사용 가능한 Gemini 모델 확인"):
                 try:
