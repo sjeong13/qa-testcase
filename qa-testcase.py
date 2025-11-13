@@ -924,7 +924,7 @@ with col1:
             else:
                 st.warning("검색어를 입력해주세요.")
 
-with col2:
+
     st.header("📊 검색 히스토리")
     
     if st.session_state.search_history:
