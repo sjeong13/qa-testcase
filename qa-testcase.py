@@ -634,7 +634,7 @@ with st.sidebar:
 # ============================================
 # 메인 영역 - AI 기반 테스트 케이스 추천
 # ============================================
-col1, col2, col3 = st.columns([3, 1, 2])
+col1, col2 = st.columns([2, 1])
 
 with col1:
     st.header("🔍 AI 기반 테스트 케이스 추천")
@@ -925,7 +925,7 @@ with col1:
             else:
                 st.warning("검색어를 입력해주세요.")
 
-with col3:
+with col2:
     st.header("📊 검색 히스토리")
     
     if st.session_state.search_history:
