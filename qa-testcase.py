@@ -3,7 +3,7 @@
 #2025-11-10 : 비밀번호 인증 기능 추가
 #2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
 #2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
-#2025-11-13 : 속도 향상 개선 함수 제거, 기획 문서에 링크 url 항목 추가, 샘플 테스트 케이스 로드 제거
+#2025-11-13 : 속도 향상 개선 함수 제거, 줄글 형식/기획 문서에 링크 url 항목 추가, 샘플 테스트 케이스 로드 제거
 
 # =====================================================================================
 
@@ -310,7 +310,7 @@ with st.sidebar:
             
             st.markdown("---")
             
-            # ========== 🆕 방법 3: 줄글 형식 (자유 입력) ==========
+            # ========== 방법 3: 줄글 형식 (자유 입력) ==========
             st.markdown("**방법 3: 줄글 형식 (자유 입력)**")
             st.info("💡 테스트 케이스를 자유롭게 작성하고 AI가 학습할 수 있도록 저장하세요!")
             
@@ -318,6 +318,12 @@ with st.sidebar:
                 "제목 *",
                 placeholder="예: 쿠폰 지정 발행 테스트 설계",
                 key="tab1_tc_free_title"
+            )
+
+            tc_free_link = st.text_input(
+                "링크 URL *",
+                placeholder="https://www.notion.so/imweb/...",
+                key="tab1_tc_free_link"
             )
             
             tc_free_content = st.text_area(
@@ -327,17 +333,16 @@ with st.sidebar:
                 key="tab1_tc_free_content"
             )
             
-            # 🆕 추가: 카테고리 선택
             tc_free_category = st.text_input(
-                "카테고리",
+                "카테고리 *",
                 placeholder="쿠폰",
                 key="tab1_tc_free_category"
             )
             
-            # 🆕 추가: 저장 버튼 및 로직
+            # 저장 버튼 및 로직
             if st.button("💾 줄글 형식 저장", type="primary", key="tab1_save_free_form_tc"):
-                if not tc_free_title or not tc_free_content:
-                    st.warning("⚠️ 제목과 내용은 필수입니다!")
+                if not tc_free_title or not tc_free_link or not tc_free_content or not tc_free_catecory:
+                    st.warning("⚠️ 모든 항목을 입력해주세요!")
                 else:
                     # 줄글 형식으로 저장 (structured_data 없이 저장)
                     free_form_test = {
@@ -391,12 +396,12 @@ with st.sidebar:
                         header = f"[{data['category']}] {data['depth1']}"
                         if data.get('depth2'):
                             header += f" > {data['depth2']}"
-                        input_type_badge = "📊 표"
+                        input_type_badge = "🔹 표"
                     else:
                         header = f"[{tc['category']}] {tc['name']}"
-                        input_type_badge = "📝 줄글" if tc.get('input_type') == 'free_form' else "📋 기타"
+                        input_type_badge = "🔸 줄글" if tc.get('input_type') == 'free_form' else "📥"
                     
-                    # 🆕 입력 방식 표시
+                    # 입력 방식 표시
                     with st.expander(f"{input_type_badge} {header}", expanded=False):
                         # 편집 모드
                         if st.session_state.editing_test_case_id == tc['id']:
@@ -544,7 +549,7 @@ with st.sidebar:
             # 저장 버튼
             if st.button("💾 기획 문서 저장", type="primary", key="tab2_save_spec"):
                 if not doc_title or not doc_type or not doc_link or not doc_content:
-                    st.warning("⚠️ 모든 항목을 필수로 입력해야 합니다!")
+                    st.warning("⚠️ 모든 항목을 입력해주세요!")
                 else:
                     new_spec = {
                         "id": len(st.session_state.spec_docs) + 1,
