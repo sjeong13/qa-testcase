@@ -777,8 +777,23 @@ with col1:
                                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "response": ai_response
                             })
+
+
+
+                            # ✅ ai_response를 세션에 저장
+                            st.session_state.last_ai_response = ai_response
+                            
                             
                             st.success("✅ AI 분석이 완료되었습니다!")
+
+
+
+                            
+                    # ✅ 세션에 저장된 ai_response 사용
+                    if 'last_ai_response' in st.session_state:
+                        ai_response = st.session_state.last_ai_response
+
+
                    
                             
                             st.markdown("### 🧠 AI의 사고 과정")
@@ -883,7 +898,9 @@ with col1:
                                         # ✅ 즉시 표시 (st.rerun() 없이)
                                         if save_result:
                                              st.success(f"✅ {added_count}개 저장 완료! (전: {before_count}개 → 후: {after_count}개)")
-                                             st.info("💡 왼쪽 사이드바를 확인하면 전체 케이스 수가 업데이트되었습니다!")
+                                            # ✅ 저장 후 ai_response 제거 (중복 저장 방지)
+                                            del st.session_state.last_ai_response
+                                            st.rerun()  # 사이드바 업데이트를 위해
                                         else:
                                             st.error("❌ 저장 실패!")
 
