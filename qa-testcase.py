@@ -634,7 +634,7 @@ with st.sidebar:
 # ============================================
 # 메인 영역 - AI 기반 테스트 케이스 추천
 # ============================================
-col1, col2, col3 = st.columns([3, 1, 1])
+col1, col2 = st.columns([2, 1])
 
 with col1:
     st.header("🔍 AI 기반 테스트 케이스 추천")
@@ -855,6 +855,7 @@ with col1:
                                                 "description": f"NO: {tc.get('no', '')}\nCATEGORY: {tc.get('category', '')}\nDEPTH1: {tc.get('depth1', '')}\nDEPTH2: {tc.get('depth2', '')}\nDEPTH3: {tc.get('depth3', '')}\nPRE-CONDITION: {tc.get('pre_condition', '')}\nSTEP: {tc.get('step', '')}\nEXPECT RESULT: {tc.get('expect_result', '')}",
                                                 "steps": [tc.get('step', '')] if tc.get('step') else [],
                                                 "related_features": [x for x in [tc.get('category', ''), tc.get('depth1', ''), tc.get('depth2', ''), tc.get('depth3', '')] if x],
+                                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                                 "structured_data": {
                                                     "no": tc.get("no", ""),
                                                     "category": tc.get("category", ""),
@@ -924,7 +925,7 @@ with col1:
             else:
                 st.warning("검색어를 입력해주세요.")
 
-with col3:
+with col2:
     st.header("📊 검색 히스토리")
     
     if st.session_state.search_history:
