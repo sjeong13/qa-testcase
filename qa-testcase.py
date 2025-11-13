@@ -806,7 +806,7 @@ with col1:
                                     hide_index=True
                                 )
 
-                                col1, col2 = st.colums(2)
+                                col1, col2 = st.columns(2)
 
                                 with col1:
                                     if EXCEL_AVAILABLE:
