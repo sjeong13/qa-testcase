@@ -3,7 +3,7 @@
 #2025-11-10 : 비밀번호 인증 기능 추가
 #2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
 #2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
-#2025-11-13 : 속도 향상 개선 함수 제거, 줄글 형식/기획 문서에 링크 url 항목 추가, 샘플 테스트 케이스 로드 제거
+#2025-11-13 : 속도 향상 개선 함수 제거, 줄글 형식/기획 문서에 링크 url 항목 추가, [샘플 테스트 케이스 로드] 버튼 제거, AI 테스트 케이스 저장 기능 추가
 
 # =====================================================================================
 
@@ -805,34 +805,76 @@ with col1:
                                     use_container_width=True,
                                     hide_index=True
                                 )
-                                
-                                if EXCEL_AVAILABLE:
-                                    output = BytesIO()
-                                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                                        df.to_excel(writer, index=False, sheet_name='테스트케이스')
-                                        workbook = writer.book
-                                        worksheet = writer.sheets['테스트케이스']
+
+                                col1, col2 = st.colums(2)
+
+                                with col1:
+                                    if EXCEL_AVAILABLE:
+                                        output = BytesIO()
+                                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                            df.to_excel(writer, index=False, sheet_name='테스트케이스')
+                                            workbook = writer.book
+                                            worksheet = writer.sheets['테스트케이스']
                                         
-                                        header_fill = PatternFill(start_color='4A90A4', end_color='4A90A4', fill_type='solid')
-                                        header_font = Font(bold=True, color='FFFFFF')
-                                        center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                                            header_fill = PatternFill(start_color='4A90A4', end_color='4A90A4', fill_type='solid')
+                                            header_font = Font(bold=True, color='FFFFFF')
+                                            center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
                                         
-                                        for cell in worksheet[1]:
-                                            cell.fill = header_fill
-                                            cell.font = header_font
-                                            cell.alignment = center_alignment
+                                            for cell in worksheet[1]:
+                                                cell.fill = header_fill
+                                                cell.font = header_font
+                                                cell.alignment = center_alignment
                                         
-                                        column_widths = {'A': 5, 'B': 15, 'C': 15, 'D': 20, 'E': 20, 'F': 30, 'G': 40, 'H': 40}
-                                        for column, width in column_widths.items():
-                                            worksheet.column_dimensions[column].width = width
+                                            column_widths = {'A': 5, 'B': 15, 'C': 15, 'D': 20, 'E': 20, 'F': 30, 'G': 40, 'H': 40}
+                                            for column, width in column_widths.items():
+                                                worksheet.column_dimensions[column].width = width
                                     
-                                    output.seek(0)
-                                    st.download_button(
-                                        label="📥 테스트 케이스 Excel로 다운로드",
-                                        data=output,
-                                        file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                    )
+                                        output.seek(0)
+                                        st.download_button(
+                                            label="📥 테스트 케이스 Excel로 다운로드",
+                                            data=output,
+                                            file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                            use_container_width=True
+                                        )
+
+
+                                # 학습 데이터로 저장 버튼 추가
+                                with col2:
+                                    if st.button("💾 학습시키기", type="primary", use_container_width=True):
+                                        added_count = 0
+            
+                                        for tc in ai_response.get("new_test_cases", []):
+                                            # 표 형식 데이터를 structured_data로 저장
+                                            structured_test = {
+                                                "id": len(st.session_state.test_cases) + added_count + 1,
+                                                "category": tc.get("category", ""),
+                                                "name": f"{tc.get('category', '')} - {tc.get('depth1', '')}" + (f" - {tc.get('depth2', '')}" if tc.get('depth2') else ""),
+                                                "description": f"NO: {tc.get('no', '')}\nCATEGORY: {tc.get('category', '')}\nDEPTH1: {tc.get('depth1', '')}\nDEPTH2: {tc.get('depth2', '')}\nDEPTH3: {tc.get('depth3', '')}\nPRE-CONDITION: {tc.get('pre_condition', '')}\nSTEP: {tc.get('step', '')}\nEXPECT RESULT: {tc.get('expect_result', '')}",
+                                                "steps": [tc.get('step', '')] if tc.get('step') else [],
+                                                "related_features": [x for x in [tc.get('category', ''), tc.get('depth1', ''), tc.get('depth2', ''), tc.get('depth3', '')] if x],
+                                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                                "structured_data": {
+                                                    "no": tc.get("no", ""),
+                                                    "category": tc.get("category", ""),
+                                                    "depth1": tc.get("depth1", ""),
+                                                    "depth2": tc.get("depth2", ""),
+                                                    "depth3": tc.get("depth3", ""),
+                                                    "pre_condition": tc.get("pre_condition", ""),
+                                                    "step": tc.get("step", ""),
+                                                    "expect_result": tc.get("expect_result", "")
+                                                },
+                                                "source": "AI_generated"  # 🆕 AI가 생성한 케이스임을 표시
+                                            }
+                                            st.session_state.test_cases.append(structured_test)
+                                            added_count += 1
+            
+                                        # JSON 파일에 저장
+                                        if save_test_cases_to_file(st.session_state.test_cases):
+                                            st.success(f"✅ {added_count}개의 테스트 케이스가 학습 데이터에 추가되었습니다!")
+                                            st.rerun()
+                                        else:
+                                            st.error("❌ 저장에 실패했습니다.")
                             
                             if ai_response.get("test_order"):
                                 st.markdown("### 🔄 권장 테스트 순서")
