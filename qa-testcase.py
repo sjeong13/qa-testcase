@@ -490,19 +490,20 @@ with st.sidebar:
     st.markdown("---")
     
     # 개발자 도구
-    with st.expander("🔧 개발자 도구", expanded=False):
-        if st.button("🔍 사용 가능한 Gemini 모델 확인"):
-            try:
-                api_key = os.environ.get("GOOGLE_API_KEY")
-                genai.configure(api_key=api_key)
+    with tab1:
+        with st.expander("🔧 개발자 도구", expanded=False):
+            if st.button("🔍 사용 가능한 Gemini 모델 확인"):
+                try:
+                    api_key = os.environ.get("GOOGLE_API_KEY")
+                    genai.configure(api_key=api_key)
             
-                models = genai.list_models()
-                st.write("### 사용 가능한 모델 목록:")
-                for model in models:
-                    if 'generateContent' in model.supported_generation_methods:
-                        st.write(f"✅ {model.name}")
-            except Exception as e:
-                st.error(f"오류: {str(e)}")
+                    models = genai.list_models()
+                    st.write("### 사용 가능한 모델 목록:")
+                    for model in models:
+                        if 'generateContent' in model.supported_generation_methods:
+                            st.write(f"✅ {model.name}")
+                except Exception as e:
+                    st.error(f"오류: {str(e)}")
     
     # ============================================
     # 📚 탭 2: 기획 문서 추가
