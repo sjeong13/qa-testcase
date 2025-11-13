@@ -2,7 +2,7 @@
 #2025-11-10 : 비밀번호 인증 기능 추가
 #2025-11-11 : JSON 다운로드, [수정] 버튼 추가, 테스트 케이스 - 줄글 형식 저장 기능 추가
 #2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
-#2025-11-13 : 속도 향상 개선 함수 제거
+#2025-11-13 : 속도 향상 개선 함수 제거, 기획 문서에 링크 url 항목 추가
 # ============================================
 import streamlit as st
 import json
@@ -603,7 +603,7 @@ with st.sidebar:
                 key="tab2_spec_type"
             )
 
-            # 문서 유형
+            # 링크 URL
             doc_link = st.text_input(
                 "링크 URL *",
                 placeholder="https://www.notion.so/imweb/...",
