@@ -924,9 +924,9 @@ with col1:
             else:
                 st.warning("검색어를 입력해주세요.")
                                     
-        # ✅ 세션에 저장된 ai_response 사용
-        if 'last_ai_response' in st.session_state:
-            ai_response = st.session_state.last_ai_response
+            # ✅ 세션에 저장된 ai_response 사용
+            if 'last_ai_response' in st.session_state:
+                ai_response = st.session_state.last_ai_response
 
 with col2:
     st.header("📊 검색 히스토리")
