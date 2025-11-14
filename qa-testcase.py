@@ -177,7 +177,7 @@ if page == "test_cases":
                 input_type_badge = "🔹 표 그룹"
                 header = f"[{tc['created_at'][:10]}] {tc['name']}"
             elif tc.get('input_type') == 'ai_generated_group':
-                input_type_badge = "🤖 AI 생성"
+                input_type_badge = "🦾 AI 생성"
                 header = f"[{tc['created_at'][:10]}] {tc['name']}"
             elif tc.get('input_type') == 'free_form':
                 header = f"[{tc['category']}] {tc['name']}"
@@ -288,7 +288,7 @@ if page == "test_cases":
                 else:
                     # 그룹 데이터 표시
                     if 'table_data' in tc:
-                        st.write(f"**생성일:** {tc['created_at']}")
+                        # st.write(f"**생성일:** {tc['created_at']}")
                         st.write(f"**테스트 케이스 수:** {len(tc['table_data'])}개")
                         df = pd.DataFrame(tc['table_data'])
                         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -1007,7 +1007,7 @@ else:
                                 "group_id": group_id,
                                 "input_type": "ai_generated_group",
                                 "category": "AI 생성",
-                                "name": f"AI 생성 그룹 ({len(table_data)}개)",
+                                "name": f" ({len(table_data)}개)",
                                 "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "table_data": table_data,
                                 "source": "AI_generated"
