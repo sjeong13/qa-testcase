@@ -283,34 +283,8 @@ with st.sidebar:
             
             st.markdown("---")
             
-            # ========== 방법 2: CSV/Excel 파일 업로드 ==========
-            st.markdown("**방법 2: CSV/Excel 파일 업로드**")
-            uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'], key="upload_tc")
-            
-            if uploaded_file is not None:
-                try:
-                    if uploaded_file.name.endswith('.csv'):
-                        df = pd.read_csv(uploaded_file)
-                    else:
-                        df = pd.read_excel(uploaded_file)
-                    
-                    required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
-                    
-                    if not all(col in df.columns for col in required_columns):
-                        st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
-                        st.dataframe(df.head())
-                    else:
-                        st.session_state.edit_df = df[required_columns].fillna('')
-                        st.success(f"✅ {len(df)}개 행이 로드되었습니다!")
-                        st.info("👆 위의 표를 확인하고 '💾 표 형식 저장' 버튼을 눌러주세요.")
-                        
-                except Exception as e:
-                    st.error(f"파일 읽기 오류: {str(e)}")
-            
-            st.markdown("---")
-            
-            # ========== 방법 3: 줄글 형식 (자유 입력) ==========
-            st.markdown("**방법 3: 줄글 형식 (자유 입력)**")
+            # ========== 방법 2: 줄글 형식 (자유 입력) ==========
+            st.markdown("**방법 2: 줄글 형식 (자유 입력)**")
             st.info("💡 테스트 케이스를 자유롭게 작성하고 AI가 학습할 수 있도록 저장하세요!")
             
             tc_free_title = st.text_input(
@@ -360,7 +334,34 @@ with st.sidebar:
                     st.rerun()
 
         
-        st.markdown("---")
+            st.markdown("---")
+            
+            # ========== 방법 3: CSV/Excel 파일 업로드 ==========
+            st.markdown("**방법 3: CSV/Excel 파일 업로드**")
+            uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'], key="upload_tc")
+            
+            if uploaded_file is not None:
+                try:
+                    if uploaded_file.name.endswith('.csv'):
+                        df = pd.read_csv(uploaded_file)
+                    else:
+                        df = pd.read_excel(uploaded_file)
+                    
+                    required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
+                    
+                    if not all(col in df.columns for col in required_columns):
+                        st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
+                        st.dataframe(df.head())
+                    else:
+                        st.session_state.edit_df = df[required_columns].fillna('')
+                        st.success(f"✅ {len(df)}개 행이 로드되었습니다!")
+                        st.info("👆 위의 표를 확인하고 '💾 표 형식 저장' 버튼을 눌러주세요.")
+                        
+                except Exception as e:
+                    st.error(f"파일 읽기 오류: {str(e)}")
+            
+            st.markdown("---")
+
         
         # 테스트 케이스 요약
         st.subheader(f"📋 저장된 테스트 케이스")
