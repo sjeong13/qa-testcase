@@ -175,10 +175,10 @@ if page == "test_cases":
             # 입력 방식 배지 설정
             if tc.get('input_type') == 'table_group':
                 input_type_badge = "🔹 표 그룹"
-                header = f"[{tc['created_at'][:10]}] {tc['name']}"
+                header = f"{tc['name']}"
             elif tc.get('input_type') == 'ai_generated_group':
                 input_type_badge = "🦾 AI 생성"
-                header = f"[{tc['created_at'][:10]}] {tc['name']}"
+                header = f"{tc['name']}"
             elif tc.get('input_type') == 'free_form':
                 header = f"[{tc['category']}] {tc['name']}"
                 input_type_badge = "🔸 줄글"
@@ -521,7 +521,7 @@ else:
                                 "input_type": "table_group",
                                 "category": "표 그룹",
                                 "name": f"표 입력 그룹 ({len(table_data)}개)",
-                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "table_data": table_data
                             }
                             st.session_state.test_cases.append(group_test)
@@ -587,7 +587,7 @@ else:
                             "description": tc_free_content,
                             "steps": [],
                             "related_features": [tc_free_category] if tc_free_category else [],
-                            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             "input_type": "free_form"
                         }
                         st.session_state.test_cases.append(free_form_test)
@@ -1008,7 +1008,7 @@ else:
                                 "input_type": "ai_generated_group",
                                 "category": "AI 생성",
                                 "name": f" ({len(table_data)}개)",
-                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "table_data": table_data,
                                 "source": "AI_generated"
                             }
