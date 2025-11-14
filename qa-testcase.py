@@ -787,13 +787,6 @@ with col1:
                             st.success("✅ AI 분석이 완료되었습니다!")
 
 
-
-                            
-                # ✅ 세션에 저장된 ai_response 사용
-                if 'last_ai_response' in st.session_state:
-                    ai_response = st.session_state.last_ai_response
-
-
                    
                             
                             st.markdown("### 🧠 AI의 사고 과정")
@@ -930,6 +923,10 @@ with col1:
                             st.error(f"❌ AI 분석 중 오류가 발생했습니다: {str(e)}")
             else:
                 st.warning("검색어를 입력해주세요.")
+                                    
+    # ✅ 세션에 저장된 ai_response 사용
+    if 'last_ai_response' in st.session_state:
+        ai_response = st.session_state.last_ai_response
 
 with col2:
     st.header("📊 검색 히스토리")
