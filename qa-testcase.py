@@ -332,9 +332,6 @@ with st.sidebar:
                     save_test_cases_to_file(st.session_state.test_cases)
                     st.success(f"✅ '{tc_free_title}' 테스트 케이스가 저장되었습니다!")
                     st.rerun()
-
-        
-            st.markdown("---")
             
             # ========== 방법 3: CSV/Excel 파일 업로드 ==========
             st.markdown("**방법 3: CSV/Excel 파일 업로드**")
