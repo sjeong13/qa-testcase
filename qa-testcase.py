@@ -360,6 +360,8 @@ with st.sidebar:
                     st.error(f"파일 읽기 오류: {str(e)}")
 
         st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
         
         # 테스트 케이스 요약
         st.subheader(f"📋 저장된 테스트 케이스")
