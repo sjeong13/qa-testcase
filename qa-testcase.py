@@ -733,8 +733,12 @@ else:
                         save_spec_docs_to_file(st.session_state.spec_docs)
                         st.success(f"✅ 기획 문서 '{doc_title}'가 저장되었습니다!")
                         st.rerun()
-            
-            st.markdown("---")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
             
             # 기획 문서 요약
             st.subheader(f"📄 저장된 기획 문서")
@@ -1066,8 +1070,8 @@ else:
     st.markdown("""
     #### 💡 사용 방법
     1. **학습 데이터 추가 (사이드바)**
-       - 📝 테스트 케이스: 기존 테스트 케이스를 표/CSV/Excel로 추가
-       - 📚 기획 문서: 노션, Jira 등에서 기획 문서를 복사해서 추가
+       - 📝 테스트 케이스: 기존 테스트 케이스를 표, 자유 형식, CSV/Excel로 추가
+       - 📚 기획 문서: 노션, Jira 문서를 복사해서 추가
     2. **검색창**에 테스트하고 싶은 기능을 입력하세요
     3. **AI가 자동으로** 기존 데이터를 학습하여 신규 테스트 케이스를 생성합니다
     4. 생성된 테스트 케이스는 표 형식으로 확인하고 Excel로 다운로드할 수 있습니다
