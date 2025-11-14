@@ -221,13 +221,12 @@ with st.sidebar:
                     "STEP": st.column_config.TextColumn("STEP", width="large", help="수행 단계"),
                     "EXPECT RESULT": st.column_config.TextColumn("EXPECT RESULT", width="large", help="예상 결과"),
                 },
-                # key="test_case_editor"
-                key=f"test_case_editor_{st.session_state.editor_key}"  # 동적 키 사용
+                key=f"test_case_editor_{st.session_state.editor_key}"
             )
             # 변경사항 즉시 반영
             if not edited_df.equals(st.session_state.edit_df):
                 st.session_state.edit_df = edited_df.copy()
-                st.session_state.editor_key += 1  # 키 업데이트로 강제 리프레시
+                st.session_state.editor_key += 1
                 st.rerun()
             
             st.session_state.edit_df = edited_df
@@ -344,7 +343,7 @@ with st.sidebar:
                 if not tc_free_title or not tc_free_link or not tc_free_content or not tc_free_category:
                     st.warning("⚠️ 모든 항목을 입력해주세요!")
                 else:
-                    # 줄글 형식으로 저장 (structured_data 없이 저장)
+                    # 줄글 형식으로 저장
                     free_form_test = {
                         "id": len(st.session_state.test_cases) + 1,
                         "category": tc_free_category if tc_free_category else "기타",
@@ -353,7 +352,7 @@ with st.sidebar:
                         "steps": [],
                         "related_features": [tc_free_category] if tc_free_category else [],
                         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "input_type": "free_form"  # 🆕 구분자 추가
+                        "input_type": "free_form"
                     }
                     st.session_state.test_cases.append(free_form_test)
                     save_test_cases_to_file(st.session_state.test_cases)
@@ -743,10 +742,9 @@ with col1:
                             else:
                                 json_str = response_text.strip()
 
-                            # 2. 제어 문자 사전 제거 (파싱 전에 처리)
+                            # 2. 제어 문자 사전 제거
                             import re
                             json_str_cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]', '', json_str)
-                            
                             
                             # 3. JSON 파싱 시도
                             try:
@@ -760,11 +758,9 @@ with col1:
                                     st.write(f"**오류 메시지:** {e.msg}")
                                     st.code(json_str_cleaned[:1000], language="json")
         
-                                # 4. 최종 fallback: 더 공격적인 정리
+                                # 4. 최종 fallback
                                 try:
-                                    # 줄바꿈을 공백으로 치환
                                     json_str_final = json_str_cleaned.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-                                    # 연속된 공백 제거
                                     json_str_final = re.sub(r'\s+', ' ', json_str_final)
                                     ai_response = json.loads(json_str_final)
                                     st.warning("⚠️ JSON 파싱에 문제가 있어 일부 데이터가 손실되었을 수 있습니다.")
@@ -778,155 +774,136 @@ with col1:
                                 "response": ai_response
                             })
 
-
-
                             # ✅ ai_response를 세션에 저장
                             st.session_state.last_ai_response = ai_response
-                            
-                            
                             st.success("✅ AI 분석이 완료되었습니다!")
-
-# ✅ 세션에 저장된 ai_response 사용
-if 'last_ai_response' in st.session_state:
-ai_response = st.session_state.last_ai_response
-
-                   
-                            
-                            st.markdown("### 🧠 AI의 사고 과정")
-                            st.info(ai_response.get("reasoning", "추론 과정 없음"))
-                            
-                            if ai_response.get("new_test_cases"):
-                                st.markdown("### AI가 생성한 신규 테스트 케이스")
-                                
-                                df_data = []
-                                for tc in ai_response.get("new_test_cases", []):
-                                    df_data.append({
-                                        "NO": tc.get("no", ""),
-                                        "CATEGORY": tc.get("category", ""),
-                                        "DEPTH 1": tc.get("depth1", ""),
-                                        "DEPTH 2": tc.get("depth2", ""),
-                                        "DEPTH 3": tc.get("depth3", ""),
-                                        "PRE-CONDITION": tc.get("pre_condition", ""),
-                                        "STEP": tc.get("step", ""),
-                                        "EXPECT RESULT": tc.get("expect_result", "")
-                                    })
-                                
-                                df = pd.DataFrame(df_data)
-                                
-                                st.dataframe(
-                                    df,
-                                    use_container_width=True,
-                                    hide_index=True
-                                )
-
-                                col1, col2 = st.columns(2)
-
-                                with col1:
-                                    if EXCEL_AVAILABLE:
-                                        output = BytesIO()
-                                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                                            df.to_excel(writer, index=False, sheet_name='테스트케이스')
-                                            workbook = writer.book
-                                            worksheet = writer.sheets['테스트케이스']
-                                        
-                                            header_fill = PatternFill(start_color='4A90A4', end_color='4A90A4', fill_type='solid')
-                                            header_font = Font(bold=True, color='FFFFFF')
-                                            center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-                                        
-                                            for cell in worksheet[1]:
-                                                cell.fill = header_fill
-                                                cell.font = header_font
-                                                cell.alignment = center_alignment
-                                        
-                                            column_widths = {'A': 5, 'B': 15, 'C': 15, 'D': 20, 'E': 20, 'F': 30, 'G': 40, 'H': 40}
-                                            for column, width in column_widths.items():
-                                                worksheet.column_dimensions[column].width = width
-                                    
-                                        output.seek(0)
-                                        st.download_button(
-                                            label="📥 테스트 케이스 Excel로 다운로드",
-                                            data=output,
-                                            file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                            use_container_width=True
-                                        )
-
-
-                                # 학습 데이터로 저장 버튼 추가
-                                with col2:
-                                    if st.button("💾 학습시키기", type="primary", use_container_width=True):
-                                        # 🔧 저장 전 개수 (추가!)
-                                        before_count = len(st.session_state.test_cases)
-                                        added_count = 0
-            
-                                        for tc in ai_response.get("new_test_cases", []):
-                                            # 표 형식 데이터를 structured_data로 저장
-                                            structured_test = {
-                                                "id": len(st.session_state.test_cases) + added_count + 1,
-                                                "category": tc.get("category", ""),
-                                                "name": f"{tc.get('category', '')} - {tc.get('depth1', '')}" + (f" - {tc.get('depth2', '')}" if tc.get('depth2') else ""),
-                                                "description": f"NO: {tc.get('no', '')}\nCATEGORY: {tc.get('category', '')}\nDEPTH1: {tc.get('depth1', '')}\nDEPTH2: {tc.get('depth2', '')}\nDEPTH3: {tc.get('depth3', '')}\nPRE-CONDITION: {tc.get('pre_condition', '')}\nSTEP: {tc.get('step', '')}\nEXPECT RESULT: {tc.get('expect_result', '')}",
-                                                "steps": [tc.get('step', '')] if tc.get('step') else [],
-                                                "related_features": [x for x in [tc.get('category', ''), tc.get('depth1', ''), tc.get('depth2', ''), tc.get('depth3', '')] if x],
-                                                "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                                "structured_data": {
-                                                    "no": tc.get("no", ""),
-                                                    "category": tc.get("category", ""),
-                                                    "depth1": tc.get("depth1", ""),
-                                                    "depth2": tc.get("depth2", ""),
-                                                    "depth3": tc.get("depth3", ""),
-                                                    "pre_condition": tc.get("pre_condition", ""),
-                                                    "step": tc.get("step", ""),
-                                                    "expect_result": tc.get("expect_result", "")
-                                                },
-                                                "source": "AI_generated"  # AI가 생성한 케이스임을 표시
-                                            }
-                                            st.session_state.test_cases.append(structured_test)
-                                            added_count += 1
-
-
-                                        # 🔧 저장 후 개수 확인
-                                        after_count = len(st.session_state.test_cases)
-
-                                        # JSON 파일에 저장
-                                        save_result = save_test_cases_to_file(st.session_state.test_cases)
-
-                                        # ✅ 즉시 표시 (st.rerun() 없이)
-                                        if save_result:
-                                             st.success(f"✅ {added_count}개 저장 완료! (전: {before_count}개 → 후: {after_count}개)")
-                                            # ✅ 저장 후 ai_response 제거 (중복 저장 방지)
-                                            del st.session_state.last_ai_response
-                                            st.rerun()  # 사이드바 업데이트를 위해
-                                        else:
-                                            st.error("❌ 저장 실패!")
-
-
-
-                            
-                            if ai_response.get("test_order"):
-                                st.markdown("### 🔄 권장 테스트 순서")
-                                st.write(ai_response["test_order"])
-                            
-                            if ai_response.get("additional_suggestions"):
-                                st.markdown("### 💡 추가 제안 (Edge Cases)")
-                                st.warning(ai_response["additional_suggestions"])
-
-                            if ai_response.get("existing_test_cases"):
-                                st.markdown("### 📝 기존 테스트 케이스 활용")
-                                
-                                for i, rec in enumerate(ai_response.get("existing_test_cases", []), 1):
-                                    test_case = next((tc for tc in st.session_state.test_cases if tc["id"] == rec["id"]), None)
-                                    
-                                    if test_case:
-                                        with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=False):
-                                            st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
-                                            st.markdown(f"**설명:** {test_case['description']}")
 
                         except Exception as e:
                             st.error(f"❌ AI 분석 중 오류가 발생했습니다: {str(e)}")
             else:
                 st.warning("검색어를 입력해주세요.")
-                                    
+
+    # ✅ 버튼 클릭 블록 밖에서 세션 체크
+    if 'last_ai_response' in st.session_state:
+        ai_response = st.session_state.last_ai_response
+        
+        st.markdown("### 🧠 AI의 사고 과정")
+        st.info(ai_response.get("reasoning", "추론 과정 없음"))
+        
+        if ai_response.get("new_test_cases"):
+            st.markdown("### AI가 생성한 신규 테스트 케이스")
+            
+            df_data = []
+            for tc in ai_response.get("new_test_cases", []):
+                df_data.append({
+                    "NO": tc.get("no", ""),
+                    "CATEGORY": tc.get("category", ""),
+                    "DEPTH 1": tc.get("depth1", ""),
+                    "DEPTH 2": tc.get("depth2", ""),
+                    "DEPTH 3": tc.get("depth3", ""),
+                    "PRE-CONDITION": tc.get("pre_condition", ""),
+                    "STEP": tc.get("step", ""),
+                    "EXPECT RESULT": tc.get("expect_result", "")
+                })
+            
+            df = pd.DataFrame(df_data)
+            
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if EXCEL_AVAILABLE:
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        df.to_excel(writer, index=False, sheet_name='테스트케이스')
+                        workbook = writer.book
+                        worksheet = writer.sheets['테스트케이스']
+                    
+                        header_fill = PatternFill(start_color='4A90A4', end_color='4A90A4', fill_type='solid')
+                        header_font = Font(bold=True, color='FFFFFF')
+                        center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                    
+                        for cell in worksheet[1]:
+                            cell.fill = header_fill
+                            cell.font = header_font
+                            cell.alignment = center_alignment
+                    
+                        column_widths = {'A': 5, 'B': 15, 'C': 15, 'D': 20, 'E': 20, 'F': 30, 'G': 40, 'H': 40}
+                        for column, width in column_widths.items():
+                            worksheet.column_dimensions[column].width = width
+                
+                    output.seek(0)
+                    st.download_button(
+                        label="📥 테스트 케이스 Excel로 다운로드",
+                        data=output,
+                        file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+
+            # 학습 데이터로 저장 버튼
+            with col2:
+                if st.button("💾 학습시키기", type="primary", use_container_width=True):
+                    before_count = len(st.session_state.test_cases)
+                    added_count = 0
+
+                    for tc in ai_response.get("new_test_cases", []):
+                        structured_test = {
+                            "id": len(st.session_state.test_cases) + added_count + 1,
+                            "category": tc.get("category", ""),
+                            "name": f"{tc.get('category', '')} - {tc.get('depth1', '')}" + (f" - {tc.get('depth2', '')}" if tc.get('depth2') else ""),
+                            "description": f"NO: {tc.get('no', '')}\nCATEGORY: {tc.get('category', '')}\nDEPTH1: {tc.get('depth1', '')}\nDEPTH2: {tc.get('depth2', '')}\nDEPTH3: {tc.get('depth3', '')}\nPRE-CONDITION: {tc.get('pre_condition', '')}\nSTEP: {tc.get('step', '')}\nEXPECT RESULT: {tc.get('expect_result', '')}",
+                            "steps": [tc.get('step', '')] if tc.get('step') else [],
+                            "related_features": [x for x in [tc.get('category', ''), tc.get('depth1', ''), tc.get('depth2', ''), tc.get('depth3', '')] if x],
+                            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "structured_data": {
+                                "no": tc.get("no", ""),
+                                "category": tc.get("category", ""),
+                                "depth1": tc.get("depth1", ""),
+                                "depth2": tc.get("depth2", ""),
+                                "depth3": tc.get("depth3", ""),
+                                "pre_condition": tc.get("pre_condition", ""),
+                                "step": tc.get("step", ""),
+                                "expect_result": tc.get("expect_result", "")
+                            },
+                            "source": "AI_generated"
+                        }
+                        st.session_state.test_cases.append(structured_test)
+                        added_count += 1
+
+                    after_count = len(st.session_state.test_cases)
+                    save_result = save_test_cases_to_file(st.session_state.test_cases)
+
+                    if save_result:
+                        st.success(f"✅ {added_count}개 저장 완료! (전: {before_count}개 → 후: {after_count}개)")
+                        del st.session_state.last_ai_response
+                        st.rerun()
+                    else:
+                        st.error("❌ 저장 실패!")
+
+        if ai_response.get("test_order"):
+            st.markdown("### 🔄 권장 테스트 순서")
+            st.write(ai_response["test_order"])
+        
+        if ai_response.get("additional_suggestions"):
+            st.markdown("### 💡 추가 제안 (Edge Cases)")
+            st.warning(ai_response["additional_suggestions"])
+
+        if ai_response.get("existing_test_cases"):
+            st.markdown("### 📝 기존 테스트 케이스 활용")
+            
+            for i, rec in enumerate(ai_response.get("existing_test_cases", []), 1):
+                test_case = next((tc for tc in st.session_state.test_cases if tc["id"] == rec["id"]), None)
+                
+                if test_case:
+                    with st.expander(f"✓ {i}. [{test_case['category']}] {test_case['name']}", expanded=False):
+                        st.markdown(f"**왜 필요한가?** {rec.get('reason', '')}")
+                        st.markdown(f"**설명:** {test_case['description']}")
 
 with col2:
     st.header("📊 검색 히스토리")
