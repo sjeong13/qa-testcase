@@ -653,7 +653,6 @@ else:
                         st.write(f"**{cat}**: {count}개")
                 
                 # 새 탭으로 열기 링크
-                st.markdown('---')
                 st.markdown(
                     '<a href="?page=test_cases" target="_blank" style="text-decoration: none;">'
                     '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
@@ -756,7 +755,6 @@ else:
                 )
             
             # 새 탭으로 열기 링크
-            st.markdown('---')
             st.markdown(
                 '<a href="?page=spec_docs" target="_blank" style="text-decoration: none;">'
                 '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
