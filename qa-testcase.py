@@ -497,9 +497,9 @@ elif page == "spec_docs":
 
 # 메인 페이지
 else:
-# 사이드바
-with st.sidebar:
-    st.header("👾 WELCOME")
+    # 사이드바
+    with st.sidebar:
+        st.header("👾 WELCOME")
 
     # Google Sheets 연결 상태 표시
     if get_google_sheets_client():
