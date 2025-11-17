@@ -501,11 +501,11 @@ else:
     with st.sidebar:
         st.header("👾 WELCOME")
 
-    # Google Sheets 연결 상태 표시
-    if get_google_sheets_client():
-        st.success("☁️ Google Sheets 연결됨")
-    else:
-        st.error("❌ Google Sheets 연결 실패")
+        # Google Sheets 연결 상태 표시
+        if get_google_sheets_client():
+            st.success("☁️ Google Sheets 연결됨")
+        else:
+            st.error("❌ Google Sheets 연결 실패")
 
     st.markdown("---")
         
