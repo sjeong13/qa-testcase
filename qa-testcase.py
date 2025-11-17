@@ -174,7 +174,7 @@ def save_spec_docs_to_sheets(spec_docs):
                 doc.get('id', ''),
                 doc.get('title', ''),
                 doc.get('doc_type', ''),
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                # datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 json.dumps(doc, ensure_ascii=False)
             ])
         
@@ -1012,7 +1012,7 @@ else:
                                 
                                 st.session_state.search_history.append({
                                     "query": search_query,
-                                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    # "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                     "response": ai_response
                                 })
 
