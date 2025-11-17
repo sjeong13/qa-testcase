@@ -81,6 +81,11 @@ def load_test_cases_from_sheets():
                 # JSON 문자열로 저장된 데이터를 파싱
                 if row.get('json_data'):
                     test_cases.append(json.loads(row['json_data']))
+                    
+            # ✅ ID 중복 제거 및 재정렬
+            for idx, tc in enumerate(test_cases, 1):
+                tc['id'] = idx
+            
             return test_cases
         return []
     except Exception as e:
@@ -142,6 +147,11 @@ def load_spec_docs_from_sheets():
             for row in data:
                 if row.get('json_data'):
                     spec_docs.append(json.loads(row['json_data']))
+
+            # ✅ ID 중복 제거 및 재정렬
+            for idx, doc in enumerate(spec_docs, 1):
+                doc['id'] = idx
+            
             return spec_docs
         return []
     except Exception as e:
