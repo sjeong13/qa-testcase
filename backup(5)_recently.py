@@ -81,6 +81,11 @@ def load_test_cases_from_sheets():
                 # JSON 문자열로 저장된 데이터를 파싱
                 if row.get('json_data'):
                     test_cases.append(json.loads(row['json_data']))
+                    
+            # ✅ ID 중복 제거 및 재정렬
+            for idx, tc in enumerate(test_cases, 1):
+                tc['id'] = idx
+            
             return test_cases
         return []
     except Exception as e:
@@ -142,6 +147,11 @@ def load_spec_docs_from_sheets():
             for row in data:
                 if row.get('json_data'):
                     spec_docs.append(json.loads(row['json_data']))
+
+            # ✅ ID 중복 제거 및 재정렬
+            for idx, doc in enumerate(spec_docs, 1):
+                doc['id'] = idx
+            
             return spec_docs
         return []
     except Exception as e:
@@ -268,15 +278,17 @@ if page == "test_cases":
         st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
         
         # 카테고리별 통계
-        with st.expander("📊 카테고리별 통계", expanded=True):
+        with st.expander("📊 카테고리별 통계", expanded=False):
             for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
                 st.write(f"**{cat}**: {count}개")
+
+        st.markdown("---")
         
         # 전체 테스트 케이스 표시
         for tc in st.session_state.test_cases:
             # 입력 방식 배지 설정
             if tc.get('input_type') == 'table_group':
-                input_type_badge = "🔹 표 그룹"
+                input_type_badge = "🔹"
                 header = f"{tc['name']}"
             elif tc.get('input_type') == 'ai_generated_group':
                 input_type_badge = "🦾 AI 생성"
@@ -289,7 +301,7 @@ if page == "test_cases":
                 header = f"[{data['category']}] {data['depth1']}"
                 if data.get('depth2'):
                     header += f" > {data['depth2']}"
-                input_type_badge = "🔹 표"
+                input_type_badge = "🔹"
             else:
                 header = f"[{tc['category']}] {tc['name']}"
                 input_type_badge = "📥"
@@ -313,7 +325,7 @@ if page == "test_cases":
                         with col1:
                             if st.button("💾 저장", key=f"save_group_edit_{tc['id']}", type="primary"):
                                 tc['table_data'] = edited_df.to_dict('records')
-                                tc['name'] = f"{'AI 생성' if tc.get('input_type') == 'ai_generated_group' else '표 입력'} 그룹 ({len(edited_df)}개)"
+                                tc['name'] = f"{'AI 생성' if tc.get('input_type') == 'ai_generated_group' else '입력'} 그룹 ({len(edited_df)}개)"
                                 save_test_cases_to_sheets(st.session_state.test_cases)
                                 st.session_state.editing_test_case_id = None
                                 st.success("✅ 저장되었습니다!")
@@ -624,11 +636,11 @@ else:
                         if table_data:
                             # 그룹 단위로 저장
                             group_test = {
-                                "id": len(st.session_state.test_cases) + 1,
+                                "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                                 "group_id": group_id,
                                 "input_type": "table_group",
-                                "category": "표 그룹",
-                                "name": f"표 입력 그룹 ({len(table_data)}개)",
+                                "category": "입력 그룹",
+                                "name": f"({len(table_data)}개)",
                                 # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "table_data": table_data
                             }
@@ -688,7 +700,7 @@ else:
                     else:
                         # 줄글 형식으로 저장
                         free_form_test = {
-                            "id": len(st.session_state.test_cases) + 1,
+                            "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                             "category": tc_free_category if tc_free_category else "기타",
                             "name": tc_free_title,
                             "link": tc_free_link,
@@ -830,7 +842,7 @@ else:
                         st.warning("⚠️ 모든 항목을 입력해주세요!")
                     else:
                         new_spec = {
-                            "id": len(st.session_state.spec_docs) + 1,
+                            "id": max([doc.get('id', 0) for doc in st.session_state.spec_docs], default=0) + 1,
                             "title": doc_title,
                             "doc_type": doc_type,
                             "link": doc_link,
@@ -1111,7 +1123,7 @@ else:
                         
                         if table_data:
                             group_test = {
-                                "id": len(st.session_state.test_cases) + 1,
+                                "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                                 "group_id": group_id,
                                 "input_type": "ai_generated_group",
                                 "category": "AI 생성",
@@ -1162,12 +1174,25 @@ else:
         
         if st.session_state.search_history:
             for i, history in enumerate(reversed(st.session_state.search_history[-5:]), 1):
-                with st.expander(f"{history['timestamp'][:10]} - {history['query'][:20]}...", expanded=(i==1)):
-                    st.write(f"**검색어:** {history['query']}")
-                    existing_count = len(history['response'].get('existing_test_cases', []))
-                    new_count = len(history['response'].get('new_test_cases', []))
-                    st.write(f"**기존 테스트:** {existing_count}개")
-                    st.write(f"**신규 생성:** {new_count}개")
+                # ✅ 안전한 접근 - history가 None이거나 dict가 아니면 스킵
+                if not history or not isinstance(history, dict):
+                    continue
+                    
+                # ✅ 필수 키 확인
+                timestamp = history.get('timestamp', '알 수 없음')
+                query = history.get('query', '검색어 없음')
+
+                with st.expander(f"{timestamp[:10]} - {query[:20]}...", expanded=(i==1)):
+                    st.write(f"**검색어:** {query}")
+
+                    # ✅ response 안전한 접근
+                    if history.get('response') and isinstance(history['response'], dict):
+                        existing_count = len(history['response'].get('existing_test_cases', []))
+                        new_count = len(history['response'].get('new_test_cases', []))
+                        st.write(f"**기존 테스트:** {existing_count}개")
+                        st.write(f"**신규 생성:** {new_count}개")
+                    else:
+                        st.warning("⚠️ 이 검색은 오류가 발생했습니다.")
         else:
             st.info("아직 검색 히스토리가 없습니다.")
 
