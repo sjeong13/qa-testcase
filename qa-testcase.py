@@ -288,7 +288,7 @@ if page == "test_cases":
         for tc in st.session_state.test_cases:
             # 입력 방식 배지 설정
             if tc.get('input_type') == 'table_group':
-                input_type_badge = "🔹 표 그룹"
+                input_type_badge = "🔹 표"
                 header = f"{tc['name']}"
             elif tc.get('input_type') == 'ai_generated_group':
                 input_type_badge = "🦾 AI 생성"
@@ -325,7 +325,7 @@ if page == "test_cases":
                         with col1:
                             if st.button("💾 저장", key=f"save_group_edit_{tc['id']}", type="primary"):
                                 tc['table_data'] = edited_df.to_dict('records')
-                                tc['name'] = f"{'AI 생성' if tc.get('input_type') == 'ai_generated_group' else '표 입력'} 그룹 ({len(edited_df)}개)"
+                                tc['name'] = f"{'AI 생성' if tc.get('input_type') == 'ai_generated_group' else '입력'} 그룹 ({len(edited_df)}개)"
                                 save_test_cases_to_sheets(st.session_state.test_cases)
                                 st.session_state.editing_test_case_id = None
                                 st.success("✅ 저장되었습니다!")
@@ -639,7 +639,7 @@ else:
                                 "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                                 "group_id": group_id,
                                 "input_type": "table_group",
-                                "category": "표 입력 그룹",
+                                "category": "입력 그룹",
                                 "name": f"({len(table_data)}개)",
                                 # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "table_data": table_data
