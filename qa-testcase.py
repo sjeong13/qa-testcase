@@ -639,8 +639,8 @@ else:
                                 "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                                 "group_id": group_id,
                                 "input_type": "table_group",
-                                "category": "표 그룹",
-                                "name": f"표 입력 그룹 ({len(table_data)}개)",
+                                "category": "표 입력 그룹",
+                                "name": f"({len(table_data)}개)",
                                 # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                 "table_data": table_data
                             }
