@@ -105,7 +105,7 @@ def save_test_cases_to_sheets(test_cases):
         sheet.clear()
         
         # 헤더 추가
-        sheet.append_row(['id', 'category', 'name', 'created_at', 'json_data'])
+        sheet.append_row(['id', 'category', 'name', 'json_data'])
         
         # 데이터 추가
         for tc in test_cases:
@@ -113,7 +113,6 @@ def save_test_cases_to_sheets(test_cases):
                 tc.get('id', ''),
                 tc.get('category', ''),
                 tc.get('name', ''),
-                tc.get('created_at', ''),
                 json.dumps(tc, ensure_ascii=False)
             ])
         
@@ -167,7 +166,7 @@ def save_spec_docs_to_sheets(spec_docs):
         sheet.clear()
         
         # 헤더 추가
-        sheet.append_row(['id', 'title', 'doc_type', 'created_at', 'json_data'])
+        sheet.append_row(['id', 'title', 'doc_type', 'json_data'])
         
         # 데이터 추가
         for doc in spec_docs:
