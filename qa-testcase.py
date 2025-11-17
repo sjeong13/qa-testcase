@@ -5,7 +5,7 @@
 #2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
 #2025-11-13 : 속도 향상 개선 함수 제거, 줄글 형식/기획 문서에 링크 url 항목 추가, [샘플 테스트 케이스 로드] 버튼 제거, AI 테스트 케이스 저장 기능 추가
 #2025-11-14 : 브라우저 새 탭 전체보기 기능 추가, 기존 테스트 케이스 활용 접힘 상태, 테스트 케이스 표 하나의 케이스로 묶기
-#2025-11-17 : Google Sheets 연동 추가 - 데이터 영구 저장
+#2025-11-17 : Google Sheets 연동 추가 - 데이터 영구 저장, 연관성 기반 필터링 함수 추가(결국 학습 데이터가 많아서 타임아웃 걸림...)
 
 # =====================================================================================
 
@@ -902,6 +902,43 @@ else:
                 height=150,
                 key="search_input"
             )
+
+        # ✅ 연관성 기반 필터링 함수
+        def get_relevant_test_cases(query, test_cases, max_cases=50):
+            """검색어와 연관성 높은 테스트 케이스 추출"""
+            # 1. 검색어에서 주요 키워드 추출 (소문자 변환)
+            query_keywords = set(query.lower().split())
+            scored_cases = []
+
+            # 2. 각 테스트 케이스의 연관성 점수 계산
+            for tc in test_cases:
+                score = 0
+                
+                # 카테고리 매칭 (가중치 3)
+                if tc.get('category') and any(k in tc['category'].lower() for k in query_keywords):
+                    score += 1
+
+                # 이름/제목 매칭 (가중치 2)
+                if tc.get('name') and any(k in tc['name'].lower() for k in query_keywords):
+                    score += 2
+
+                # 설명/내용 매칭 (가중치 1)
+                if tc.get('description') and any(k in tc['description'].lower() for k in query_keywords):
+                    score += 5
+
+                # 표 데이터 매칭 (가중치 1)
+                if tc.get('table_data'):
+                    for row in tc['table_data']:
+                        if any(k in str(row).lower() for k in query_keywords):
+                            score += 3
+                            break
+                scored_cases.append((score, tc))
+
+            # 3. 점수 높은 순으로 정렬 후 상위 N개 선택
+            scored_cases.sort(reverse=True, key=lambda x: x[0])
+            relevant = [tc for score, tc in scored_cases if score > 0][:max_cases]
+            # 4. 연관성 없으면 최근 케이스 반환
+            return relevant if relevant else test_cases[-max_cases:]
             
             if st.button("AI 추천 받기", type="primary"):
                 if search_query:
@@ -909,13 +946,26 @@ else:
                         client = get_gemini_client()
                         
                         if client:
-                            test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
+                            # 연관성 높은 케이스 선택
+                            relevant_cases = get_relevant_test_cases(search_query, st.session_state.test_cases, max_cases=50)
+                            test_cases_str = json.dumps(relevant_cases, ensure_ascii=False, indent=2)
+                            
+                            # test_cases_str = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
                             
                             spec_docs_str = ""
                             if st.session_state.spec_docs:
                                 spec_docs_str = "\n\n=== 기획 문서 ===\n"
                                 for doc in st.session_state.spec_docs:
                                     spec_docs_str += f"\n[문서 제목: {doc['title']}]\n[문서 유형: {doc['doc_type']}]\n[내용]\n{doc['content']}\n\n---\n"
+
+                            # ✅ 토큰 체크
+                            estimated_tokens = len(test_cases_str + spec_docs_str) / 4
+                            if estimated_tokens > 500000:
+                                st.warning("⚠️ 데이터가 너무 많아 연관성 높은 데이터만 사용합니다.")
+                                relevant_cases = relevant_cases[:25]
+                                test_cases_str = json.dumps(relevant_cases, ensure_ascii=False, indent=2)
+
+                            st.info(f"📊 {len(relevant_cases)}개의 관련 테스트 케이스를 학습합니다.")
                             
                             prompt = f"""[역할 부여]
 너는 나와 같이 IT SaaS에 다니고 있는 QA 전문가, QA 엔지니어야.
