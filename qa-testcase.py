@@ -624,7 +624,7 @@ else:
                         if table_data:
                             # 그룹 단위로 저장
                             group_test = {
-                                "id": len(st.session_state.test_cases) + 1,
+                                "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                                 "group_id": group_id,
                                 "input_type": "table_group",
                                 "category": "표 그룹",
@@ -688,7 +688,7 @@ else:
                     else:
                         # 줄글 형식으로 저장
                         free_form_test = {
-                            "id": len(st.session_state.test_cases) + 1,
+                            "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                             "category": tc_free_category if tc_free_category else "기타",
                             "name": tc_free_title,
                             "link": tc_free_link,
@@ -830,7 +830,7 @@ else:
                         st.warning("⚠️ 모든 항목을 입력해주세요!")
                     else:
                         new_spec = {
-                            "id": len(st.session_state.spec_docs) + 1,
+                            "id": max([doc.get('id', 0) for doc in st.session_state.spec_docs], default=0) + 1,
                             "title": doc_title,
                             "doc_type": doc_type,
                             "link": doc_link,
@@ -1111,7 +1111,7 @@ else:
                         
                         if table_data:
                             group_test = {
-                                "id": len(st.session_state.test_cases) + 1,
+                                "id": max([tc.get('id', 0) for tc in st.session_state.test_cases], default=0) + 1,
                                 "group_id": group_id,
                                 "input_type": "ai_generated_group",
                                 "category": "AI 생성",
