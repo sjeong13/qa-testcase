@@ -38,7 +38,7 @@ def get_gemini_client():
     genai.configure(api_key=api_key)
     # return genai.GenerativeModel('models/gemini-2.5-flash')
     # return genai.GenerativeModel('models/gemini-2.5-pro') # 품질 중요시
-    return genai.GenerativeModel('models/gemini-1.5-flash')
+    return genai.GenerativeModel('gemini-2.0-flash-exp') # 베타 버전
 
 # Google Sheets 연결
 @st.cache_resource
