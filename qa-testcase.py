@@ -278,9 +278,11 @@ if page == "test_cases":
         st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
         
         # 카테고리별 통계
-        with st.expander("📊 카테고리별 통계", expanded=True):
+        with st.expander("📊 카테고리별 통계", expanded=False):
             for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
                 st.write(f"**{cat}**: {count}개")
+
+        st.markdown("---")
         
         # 전체 테스트 케이스 표시
         for tc in st.session_state.test_cases:
