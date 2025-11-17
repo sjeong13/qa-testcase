@@ -940,10 +940,10 @@ else:
                 key="search_input"
             )
             
-                if st.button("AI 추천 받기", type="primary"):
-                    if search_query:
-                        with st.spinner("AI가 연관된 테스트 케이스를 찾고 있습니다..."):
-                            client = get_gemini_client()
+        if st.button("AI 추천 받기", type="primary"):
+                if search_query:
+                    with st.spinner("AI가 연관된 테스트 케이스를 찾고 있습니다..."):
+                        client = get_gemini_client()
                         
                         if client:
                             # 연관성 높은 케이스 선택
