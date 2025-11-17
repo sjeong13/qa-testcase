@@ -315,7 +315,7 @@ if page == "test_cases":
                             if st.button("💾 저장", key=f"save_group_edit_{tc['id']}", type="primary"):
                                 tc['table_data'] = edited_df.to_dict('records')
                                 tc['name'] = f"{'AI 생성' if tc.get('input_type') == 'ai_generated_group' else '표 입력'} 그룹 ({len(edited_df)}개)"
-                                save_test_cases_to_file(st.session_state.test_cases)
+                                save_test_cases_to_sheets(st.session_state.test_cases)
                                 st.session_state.editing_test_case_id = None
                                 st.success("✅ 저장되었습니다!")
                                 st.rerun()
@@ -353,7 +353,7 @@ if page == "test_cases":
                                     "expect_result": edit_expect
                                 }
                                 tc['description'] = f"NO: {edit_no}\nCATEGORY: {edit_category}\nDEPTH1: {edit_depth1}\nDEPTH2: {edit_depth2}\nDEPTH3: {edit_depth3}\nPRE-CONDITION: {edit_pre_condition}\nSTEP: {edit_step}\nEXPECT RESULT: {edit_expect}"
-                                save_test_cases_to_file(st.session_state.test_cases)
+                                save_test_cases_to_sheets(st.session_state.test_cases)
                                 st.session_state.editing_test_case_id = None
                                 st.success("✅ 저장되었습니다!")
                                 st.rerun()
@@ -377,7 +377,7 @@ if page == "test_cases":
                                 tc['link'] = edit_link
                                 tc['description'] = edit_description
                                 
-                                save_test_cases_to_file(st.session_state.test_cases)
+                                save_test_cases_to_sheets(st.session_state.test_cases)
                                 st.session_state.editing_test_case_id = None
                                 st.success("✅ 저장되었습니다!")
                                 st.rerun()
@@ -426,7 +426,7 @@ if page == "test_cases":
                     with col2:
                         if st.button("🗑️ 삭제", key=f"delete_tc_full_{tc['id']}"):
                             st.session_state.test_cases = [t for t in st.session_state.test_cases if t['id'] != tc['id']]
-                            save_test_cases_to_file(st.session_state.test_cases)
+                            save_test_cases_to_sheets(st.session_state.test_cases)
                             st.success("✅ 삭제되었습니다!")
                             st.rerun()
     else:
@@ -463,7 +463,7 @@ elif page == "spec_docs":
                             doc['link'] = edit_link
                             doc['content'] = edit_content
                             
-                            save_spec_docs_to_file(st.session_state.spec_docs)
+                            save_spec_docs_to_sheets(st.session_state.spec_docs)
                             st.session_state.editing_spec_doc_id = None
                             st.success("✅ 저장되었습니다!")
                             st.rerun()
@@ -489,7 +489,7 @@ elif page == "spec_docs":
                     with col2:
                         if st.button("🗑️ 삭제", key=f"delete_spec_full_{doc['id']}"):
                             st.session_state.spec_docs = [d for d in st.session_state.spec_docs if d['id'] != doc['id']]
-                            save_spec_docs_to_file(st.session_state.spec_docs)
+                            save_spec_docs_to_sheets(st.session_state.spec_docs)
                             st.success("✅ 삭제되었습니다!")
                             st.rerun()
     else:
@@ -501,11 +501,11 @@ else:
     with st.sidebar:
         st.header("👾 WELCOME")
 
-            # Google Sheets 연결 상태 표시
-            if get_google_sheets_client():
-                st.success("☁️ Google Sheets 연결됨")
-            else:
-                st.error("❌ Google Sheets 연결 실패")
+        # Google Sheets 연결 상태 표시
+        if get_google_sheets_client():
+            st.success("☁️ Google Sheets 연결됨")
+        else:
+            st.error("❌ Google Sheets 연결 실패")
 
         st.markdown("---")
         
@@ -635,7 +635,7 @@ else:
                             }
                             st.session_state.test_cases.append(group_test)
                             
-                            save_test_cases_to_file(st.session_state.test_cases)
+                            save_test_cases_to_sheets(st.session_state.test_cases)
                             st.session_state.edit_df = pd.DataFrame({
                                 'NO': [''],
                                 'CATEGORY': [''],
@@ -700,7 +700,7 @@ else:
                             "input_type": "free_form"
                         }
                         st.session_state.test_cases.append(free_form_test)
-                        save_test_cases_to_file(st.session_state.test_cases)
+                        save_test_cases_to_sheets(st.session_state.test_cases)
                         st.success(f"✅ '{tc_free_title}' 테스트 케이스가 저장되었습니다!")
                         st.rerun()
 
@@ -838,7 +838,7 @@ else:
                             "content": doc_content,
                         }
                         st.session_state.spec_docs.append(new_spec)
-                        save_spec_docs_to_file(st.session_state.spec_docs)
+                        save_spec_docs_to_sheets(st.session_state.spec_docs)
                         st.success(f"✅ 기획 문서 '{doc_title}'가 저장되었습니다!")
                         st.rerun()
 
@@ -1124,7 +1124,7 @@ else:
                             st.session_state.test_cases.append(group_test)
                             
                             after_count = len(st.session_state.test_cases)
-                            save_result = save_test_cases_to_file(st.session_state.test_cases)
+                            save_result = save_test_cases_to_sheets(st.session_state.test_cases)
 
                             if save_result:
                                 st.success(f"✅ {len(table_data)}개 저장 완료! (전: {before_count}개 → 후: {after_count}개)")
@@ -1186,5 +1186,5 @@ else:
 
     #### 💾 데이터 백업
     - ☁️ **Google Sheets에 자동 저장됩니다**
-   ź- 📥 **JSON 다운로드**: 백업용으로 수동 다운로드도 가능합니다.
+    - 📥 **JSON 다운로드**: 백업용으로 수동 다운로드도 가능합니다.
     """)
