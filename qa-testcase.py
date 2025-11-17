@@ -193,6 +193,43 @@ def save_spec_docs_to_sheets(spec_docs):
         st.error(f"기획 문서 저장 실패: {str(e)}")
         return False
 
+# ✅ 연관성 기반 필터링 함수
+def get_relevant_test_cases(query, test_cases, max_cases=50):
+    """검색어와 연관성 높은 테스트 케이스 추출"""
+    # 1. 검색어에서 주요 키워드 추출 (소문자 변환)
+    query_keywords = set(query.lower().split())
+    scored_cases = []
+
+    # 2. 각 테스트 케이스의 연관성 점수 계산
+    for tc in test_cases:
+        score = 0
+                
+        # 카테고리 매칭 (가중치 3)
+        if tc.get('category') and any(k in tc['category'].lower() for k in query_keywords):
+            score += 1
+
+        # 이름/제목 매칭 (가중치 2)
+        if tc.get('name') and any(k in tc['name'].lower() for k in query_keywords):
+            score += 2
+
+        # 설명/내용 매칭 (가중치 1)
+        if tc.get('description') and any(k in tc['description'].lower() for k in query_keywords):
+            score += 5
+
+        # 표 데이터 매칭 (가중치 1)
+        if tc.get('table_data'):
+            for row in tc['table_data']:
+                if any(k in str(row).lower() for k in query_keywords):
+                    score += 3
+                    break
+        scored_cases.append((score, tc))
+
+    # 3. 점수 높은 순으로 정렬 후 상위 N개 선택
+    scored_cases.sort(reverse=True, key=lambda x: x[0])
+    relevant = [tc for score, tc in scored_cases if score > 0][:max_cases]
+    # 4. 연관성 없으면 최근 케이스 반환
+    return relevant if relevant else test_cases[-max_cases:]
+
 # 세션 스테이트 초기화
 if 'test_cases' not in st.session_state:
     st.session_state.test_cases = load_test_cases_from_sheets()
@@ -902,48 +939,11 @@ else:
                 height=150,
                 key="search_input"
             )
-
-# ✅ 연관성 기반 필터링 함수
-def get_relevant_test_cases(query, test_cases, max_cases=50):
-    """검색어와 연관성 높은 테스트 케이스 추출"""
-    # 1. 검색어에서 주요 키워드 추출 (소문자 변환)
-    query_keywords = set(query.lower().split())
-    scored_cases = []
-
-    # 2. 각 테스트 케이스의 연관성 점수 계산
-    for tc in test_cases:
-        score = 0
-                
-        # 카테고리 매칭 (가중치 3)
-        if tc.get('category') and any(k in tc['category'].lower() for k in query_keywords):
-            score += 1
-
-        # 이름/제목 매칭 (가중치 2)
-        if tc.get('name') and any(k in tc['name'].lower() for k in query_keywords):
-            score += 2
-
-        # 설명/내용 매칭 (가중치 1)
-        if tc.get('description') and any(k in tc['description'].lower() for k in query_keywords):
-            score += 5
-
-        # 표 데이터 매칭 (가중치 1)
-        if tc.get('table_data'):
-            for row in tc['table_data']:
-                if any(k in str(row).lower() for k in query_keywords):
-                    score += 3
-                    break
-        scored_cases.append((score, tc))
-
-    # 3. 점수 높은 순으로 정렬 후 상위 N개 선택
-    scored_cases.sort(reverse=True, key=lambda x: x[0])
-    relevant = [tc for score, tc in scored_cases if score > 0][:max_cases]
-    # 4. 연관성 없으면 최근 케이스 반환
-    return relevant if relevant else test_cases[-max_cases:]
             
-            if st.button("AI 추천 받기", type="primary"):
-                if search_query:
-                    with st.spinner("AI가 연관된 테스트 케이스를 찾고 있습니다..."):
-                        client = get_gemini_client()
+                if st.button("AI 추천 받기", type="primary"):
+                    if search_query:
+                        with st.spinner("AI가 연관된 테스트 케이스를 찾고 있습니다..."):
+                            client = get_gemini_client()
                         
                         if client:
                             # 연관성 높은 케이스 선택
