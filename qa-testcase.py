@@ -507,54 +507,21 @@ else:
         else:
             st.error("❌ Google Sheets 연결 실패")
 
-    st.markdown("---")
+        st.markdown("---")
         
-    # 탭으로 구분
-    tab1, tab2 = st.tabs(["📝 테스트 케이스", "📚 기획 문서"])
+        # 탭으로 구분
+        tab1, tab2 = st.tabs(["📝 테스트 케이스", "📚 기획 문서"])
         
-    # ============================================
-    # 📝 탭 1: 테스트 케이스 추가
-    # ============================================
-    with tab1:
-        with st.expander("➕ [QA팀 전용 버튼]\n테스트 케이스 추가", expanded=False):
-            st.markdown("### 📝 테스트 케이스 입력")
-            st.info("💡 3가지 방법 중 편한 방식으로 테스트 케이스를 추가하세요!")
+        # ============================================
+        # 📝 탭 1: 테스트 케이스 추가
+        # ============================================
+        with tab1:
+            with st.expander("➕ [QA팀 전용 버튼]\n테스트 케이스 추가", expanded=False):
+                st.markdown("### 📝 테스트 케이스 입력")
+                st.info("💡 3가지 방법 중 편한 방식으로 테스트 케이스를 추가하세요!")
                 
-            # 세션 스테이트에 편집용 데이터프레임 초기화
-            if 'edit_df' not in st.session_state:
-                st.session_state.edit_df = pd.DataFrame({
-                    'NO': [''],
-                    'CATEGORY': [''],
-                    'DEPTH 1': [''],
-                    'DEPTH 2': [''],
-                    'DEPTH 3': [''],
-                    'PRE-CONDITION': [''],
-                    'STEP': [''],
-                    'EXPECT RESULT': ['']
-                })
-                
-            # ========== 방법 1: 표 형식 입력 ==========
-            st.markdown("**방법 1: 표에서 직접 입력/편집**")
-                
-            # 행 추가/삭제 버튼
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                if st.button("➕ 행 추가", key="add_row_tc"):
-                    new_row = pd.DataFrame({
-                        'NO': [''],
-                        'CATEGORY': [''],
-                        'DEPTH 1': [''],
-                        'DEPTH 2': [''],
-                        'DEPTH 3': [''],
-                        'PRE-CONDITION': [''],
-                        'STEP': [''],
-                        'EXPECT RESULT': ['']
-                    })
-                    st.session_state.edit_df = pd.concat([st.session_state.edit_df, new_row], ignore_index=True)
-                    st.rerun()
-                
-            with col2:
-                if st.button("🗑️ 모두 지우기", key="clear_tc"):
+                # 세션 스테이트에 편집용 데이터프레임 초기화
+                if 'edit_df' not in st.session_state:
                     st.session_state.edit_df = pd.DataFrame({
                         'NO': [''],
                         'CATEGORY': [''],
@@ -565,77 +532,29 @@ else:
                         'STEP': [''],
                         'EXPECT RESULT': ['']
                     })
-                    st.rerun()
-
-            # 데이터 에디터를 위한 고유 키 생성
-            if 'editor_key' not in st.session_state:
-                st.session_state.editor_key = 0
                 
-            # 데이터 에디터 표시
-            edited_df = st.data_editor(
-                st.session_state.edit_df,
-                use_container_width=True,
-                num_rows="dynamic",
-                hide_index=True,
-                column_config={
-                    "NO": st.column_config.TextColumn("NO", width="small", help="번호"),
-                    "CATEGORY": st.column_config.TextColumn("CATEGORY", width="medium", help="카테고리 (필수)"),
-                    "DEPTH 1": st.column_config.TextColumn("DEPTH 1", width="medium", help="대분류 (필수)"),
-                    "DEPTH 2": st.column_config.TextColumn("DEPTH 2", width="medium", help="중분류 (선택)"),
-                    "DEPTH 3": st.column_config.TextColumn("DEPTH 3", width="medium", help="소분류 (선택)"),
-                    "PRE-CONDITION": st.column_config.TextColumn("PRE-CONDITION", width="large", help="사전 조건 (선택)"),
-                    "STEP": st.column_config.TextColumn("STEP", width="large", help="수행 단계"),
-                    "EXPECT RESULT": st.column_config.TextColumn("EXPECT RESULT", width="large", help="예상 결과"),
-                },
-                key=f"test_case_editor_{st.session_state.editor_key}"
-            )
-            # 변경사항 즉시 반영
-            if not edited_df.equals(st.session_state.edit_df):
-                st.session_state.edit_df = edited_df.copy()
-                st.session_state.editor_key += 1
-                st.rerun()
+                # ========== 방법 1: 표 형식 입력 ==========
+                st.markdown("**방법 1: 표에서 직접 입력/편집**")
                 
-            st.session_state.edit_df = edited_df
-                
-            # 표 형식 저장 버튼
-            if st.button("💾 표 형식 저장", type="primary", disabled=(len(edited_df) == 0), key="save_table_tc"):
-                if len(edited_df) > 0:
-                    # 그룹 ID 생성 (저장 시점의 타임스탬프 기반)
-                    group_id = f"table_group_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                    added_count = 0
-                        
-                    # 표 데이터를 그룹으로 저장
-                    table_data = []
-                    for index, row in edited_df.iterrows():
-                        if pd.isna(row['CATEGORY']) or row['CATEGORY'] == '' or pd.isna(row['DEPTH 1']) or row['DEPTH 1'] == '':
-                            continue
-                            
-                        table_data.append({
-                            'NO': str(row['NO']) if row['NO'] and str(row['NO']).strip() else '',
-                            'CATEGORY': str(row['CATEGORY']),
-                            'DEPTH 1': str(row['DEPTH 1']),
-                            'DEPTH 2': str(row.get('DEPTH 2', '')),
-                            'DEPTH 3': str(row.get('DEPTH 3', '')),
-                            'PRE-CONDITION': str(row.get('PRE-CONDITION', '')),
-                            'STEP': str(row.get('STEP', '')),
-                            'EXPECT RESULT': str(row.get('EXPECT RESULT', ''))
+                # 행 추가/삭제 버튼
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    if st.button("➕ 행 추가", key="add_row_tc"):
+                        new_row = pd.DataFrame({
+                            'NO': [''],
+                            'CATEGORY': [''],
+                            'DEPTH 1': [''],
+                            'DEPTH 2': [''],
+                            'DEPTH 3': [''],
+                            'PRE-CONDITION': [''],
+                            'STEP': [''],
+                            'EXPECT RESULT': ['']
                         })
-                        added_count += 1
-                        
-                    if table_data:
-                        # 그룹 단위로 저장
-                        group_test = {
-                            "id": len(st.session_state.test_cases) + 1,
-                            "group_id": group_id,
-                            "input_type": "table_group",
-                            "category": "표 그룹",
-                            "name": f"표 입력 그룹 ({len(table_data)}개)",
-                            # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "table_data": table_data
-                        }
-                        st.session_state.test_cases.append(group_test)
-                            
-                        save_test_cases_to_sheets(st.session_state.test_cases)
+                        st.session_state.edit_df = pd.concat([st.session_state.edit_df, new_row], ignore_index=True)
+                        st.rerun()
+                
+                with col2:
+                    if st.button("🗑️ 모두 지우기", key="clear_tc"):
                         st.session_state.edit_df = pd.DataFrame({
                             'NO': [''],
                             'CATEGORY': [''],
@@ -646,129 +565,210 @@ else:
                             'STEP': [''],
                             'EXPECT RESULT': ['']
                         })
-                        st.success(f"✅ {added_count}개의 테스트 케이스가 그룹으로 추가되었습니다!")
                         st.rerun()
-                    else:
-                        st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
-                
-            st.markdown("---")
-                
-            # ========== 방법 2: 줄글 형식 (자유 입력) ==========
-            st.markdown("**방법 2: 줄글 형식 (자유 입력)**")
-            st.info("💡 테스트 케이스를 자유롭게 작성하고 AI가 학습할 수 있도록 저장하세요!")
-                
-            tc_free_title = st.text_input(
-                "제목 *",
-                placeholder="예: 쿠폰 지정 발행 테스트 설계",
-                key="tab1_tc_free_title"
-            )
 
-            tc_free_link = st.text_input(
-                "링크 URL",
-                placeholder="https://www.notion.so/imweb/...",
-                key="tab1_tc_free_link"
-            )
+                # 데이터 에디터를 위한 고유 키 생성
+                if 'editor_key' not in st.session_state:
+                    st.session_state.editor_key = 0
                 
-            tc_free_content = st.text_area(
-                "내용 *",
-                placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n[예시]\n1. BO에서 쿠폰 생성\n2. 특정 회원에게 쿠폰 지정 발행\n3. FO에서 쿠폰 사용 가능 여부 확인\n...",
-                height=300,
-                key="tab1_tc_free_content"
-            )
-                
-            tc_free_category = st.text_input(
-                "카테고리 *",
-                placeholder="쿠폰",
-                key="tab1_tc_free_category"
-            )
-                
-            # 저장 버튼 및 로직
-            if st.button("💾 줄글 형식 저장", type="primary", key="tab1_save_free_form_tc"):
-                if not tc_free_title or not tc_free_content or not tc_free_category:
-                    st.warning("⚠️ 모든 항목을 입력해주세요!")
-                else:
-                    # 줄글 형식으로 저장
-                    free_form_test = {
-                        "id": len(st.session_state.test_cases) + 1,
-                        "category": tc_free_category if tc_free_category else "기타",
-                        "name": tc_free_title,
-                        "link": tc_free_link,
-                        "description": tc_free_content,
-                        "steps": [],
-                        "related_features": [tc_free_category] if tc_free_category else [],
-                        # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "input_type": "free_form"
-                    }
-                    st.session_state.test_cases.append(free_form_test)
-                    save_test_cases_to_sheets(st.session_state.test_cases)
-                    st.success(f"✅ '{tc_free_title}' 테스트 케이스가 저장되었습니다!")
+                # 데이터 에디터 표시
+                edited_df = st.data_editor(
+                    st.session_state.edit_df,
+                    use_container_width=True,
+                    num_rows="dynamic",
+                    hide_index=True,
+                    column_config={
+                        "NO": st.column_config.TextColumn("NO", width="small", help="번호"),
+                        "CATEGORY": st.column_config.TextColumn("CATEGORY", width="medium", help="카테고리 (필수)"),
+                        "DEPTH 1": st.column_config.TextColumn("DEPTH 1", width="medium", help="대분류 (필수)"),
+                        "DEPTH 2": st.column_config.TextColumn("DEPTH 2", width="medium", help="중분류 (선택)"),
+                        "DEPTH 3": st.column_config.TextColumn("DEPTH 3", width="medium", help="소분류 (선택)"),
+                        "PRE-CONDITION": st.column_config.TextColumn("PRE-CONDITION", width="large", help="사전 조건 (선택)"),
+                        "STEP": st.column_config.TextColumn("STEP", width="large", help="수행 단계"),
+                        "EXPECT RESULT": st.column_config.TextColumn("EXPECT RESULT", width="large", help="예상 결과"),
+                    },
+                    key=f"test_case_editor_{st.session_state.editor_key}"
+                )
+                # 변경사항 즉시 반영
+                if not edited_df.equals(st.session_state.edit_df):
+                    st.session_state.edit_df = edited_df.copy()
+                    st.session_state.editor_key += 1
                     st.rerun()
-
-            st.markdown("---")
                 
-            # ========== 방법 3: CSV/Excel 파일 업로드 ==========
-            st.markdown("**방법 3: CSV/Excel 파일 업로드**")
-            uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'], key="upload_tc")
+                st.session_state.edit_df = edited_df
                 
-            if uploaded_file is not None:
-                try:
-                    if uploaded_file.name.endswith('.csv'):
-                        df = pd.read_csv(uploaded_file)
-                    else:
-                        df = pd.read_excel(uploaded_file)
+                # 표 형식 저장 버튼
+                if st.button("💾 표 형식 저장", type="primary", disabled=(len(edited_df) == 0), key="save_table_tc"):
+                    if len(edited_df) > 0:
+                        # 그룹 ID 생성 (저장 시점의 타임스탬프 기반)
+                        group_id = f"table_group_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        added_count = 0
                         
-                    required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
-                        
-                    if not all(col in df.columns for col in required_columns):
-                        st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
-                        st.dataframe(df.head())
-                    else:
-                        st.session_state.edit_df = df[required_columns].fillna('')
-                        st.success(f"✅ {len(df)}개 행이 로드되었습니다!")
-                        st.info("👆 위의 표를 확인하고 '💾 표 형식 저장' 버튼을 눌러주세요.")
+                        # 표 데이터를 그룹으로 저장
+                        table_data = []
+                        for index, row in edited_df.iterrows():
+                            if pd.isna(row['CATEGORY']) or row['CATEGORY'] == '' or pd.isna(row['DEPTH 1']) or row['DEPTH 1'] == '':
+                                continue
                             
-                except Exception as e:
-                    st.error(f"파일 읽기 오류: {str(e)}")
+                            table_data.append({
+                                'NO': str(row['NO']) if row['NO'] and str(row['NO']).strip() else '',
+                                'CATEGORY': str(row['CATEGORY']),
+                                'DEPTH 1': str(row['DEPTH 1']),
+                                'DEPTH 2': str(row.get('DEPTH 2', '')),
+                                'DEPTH 3': str(row.get('DEPTH 3', '')),
+                                'PRE-CONDITION': str(row.get('PRE-CONDITION', '')),
+                                'STEP': str(row.get('STEP', '')),
+                                'EXPECT RESULT': str(row.get('EXPECT RESULT', ''))
+                            })
+                            added_count += 1
+                        
+                        if table_data:
+                            # 그룹 단위로 저장
+                            group_test = {
+                                "id": len(st.session_state.test_cases) + 1,
+                                "group_id": group_id,
+                                "input_type": "table_group",
+                                "category": "표 그룹",
+                                "name": f"표 입력 그룹 ({len(table_data)}개)",
+                                # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "table_data": table_data
+                            }
+                            st.session_state.test_cases.append(group_test)
+                            
+                            save_test_cases_to_sheets(st.session_state.test_cases)
+                            st.session_state.edit_df = pd.DataFrame({
+                                'NO': [''],
+                                'CATEGORY': [''],
+                                'DEPTH 1': [''],
+                                'DEPTH 2': [''],
+                                'DEPTH 3': [''],
+                                'PRE-CONDITION': [''],
+                                'STEP': [''],
+                                'EXPECT RESULT': ['']
+                            })
+                            st.success(f"✅ {added_count}개의 테스트 케이스가 그룹으로 추가되었습니다!")
+                            st.rerun()
+                        else:
+                            st.warning("유효한 테스트 케이스가 없습니다. CATEGORY와 DEPTH 1은 필수 항목입니다.")
+                
+                st.markdown("---")
+                
+                # ========== 방법 2: 줄글 형식 (자유 입력) ==========
+                st.markdown("**방법 2: 줄글 형식 (자유 입력)**")
+                st.info("💡 테스트 케이스를 자유롭게 작성하고 AI가 학습할 수 있도록 저장하세요!")
+                
+                tc_free_title = st.text_input(
+                    "제목 *",
+                    placeholder="예: 쿠폰 지정 발행 테스트 설계",
+                    key="tab1_tc_free_title"
+                )
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-            
-        # 테스트 케이스 요약
-        st.subheader(f"📋 저장된 테스트 케이스")
-        st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
-            
-        # JSON 다운로드 버튼
-        if st.session_state.test_cases:
-            json_data = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
-            st.download_button(
-                label="📥 JSON 파일 다운로드",
-                data=json_data,
-                file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json",
-                use_container_width=True
-            )
-            
-        if st.session_state.test_cases:
-            categories = {}
-            for tc in st.session_state.test_cases:
-                cat = tc.get('category', '미분류')
-                categories[cat] = categories.get(cat, 0) + 1
+                tc_free_link = st.text_input(
+                    "링크 URL",
+                    placeholder="https://www.notion.so/imweb/...",
+                    key="tab1_tc_free_link"
+                )
                 
-            with st.expander("📊 카테고리별 통계", expanded=False):
-                for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
-                    st.write(f"**{cat}**: {count}개")
+                tc_free_content = st.text_area(
+                    "내용 *",
+                    placeholder="테스트 설계 내용을 자유롭게 작성하세요.\n\n[예시]\n1. BO에서 쿠폰 생성\n2. 특정 회원에게 쿠폰 지정 발행\n3. FO에서 쿠폰 사용 가능 여부 확인\n...",
+                    height=300,
+                    key="tab1_tc_free_content"
+                )
                 
-            # 새 탭으로 열기 링크
-            st.markdown(
-                '<a href="?page=test_cases" target="_blank" style="text-decoration: none;">'
-                '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
-                '📝 전체 테스트 케이스 보기 (새 탭) →'
-                '</button></a>',
-                unsafe_allow_html=True
-            )
+                tc_free_category = st.text_input(
+                    "카테고리 *",
+                    placeholder="쿠폰",
+                    key="tab1_tc_free_category"
+                )
+                
+                # 저장 버튼 및 로직
+                if st.button("💾 줄글 형식 저장", type="primary", key="tab1_save_free_form_tc"):
+                    if not tc_free_title or not tc_free_content or not tc_free_category:
+                        st.warning("⚠️ 모든 항목을 입력해주세요!")
+                    else:
+                        # 줄글 형식으로 저장
+                        free_form_test = {
+                            "id": len(st.session_state.test_cases) + 1,
+                            "category": tc_free_category if tc_free_category else "기타",
+                            "name": tc_free_title,
+                            "link": tc_free_link,
+                            "description": tc_free_content,
+                            "steps": [],
+                            "related_features": [tc_free_category] if tc_free_category else [],
+                            # "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "input_type": "free_form"
+                        }
+                        st.session_state.test_cases.append(free_form_test)
+                        save_test_cases_to_sheets(st.session_state.test_cases)
+                        st.success(f"✅ '{tc_free_title}' 테스트 케이스가 저장되었습니다!")
+                        st.rerun()
+
+                st.markdown("---")
+                
+                # ========== 방법 3: CSV/Excel 파일 업로드 ==========
+                st.markdown("**방법 3: CSV/Excel 파일 업로드**")
+                uploaded_file = st.file_uploader("CSV 또는 Excel 파일 선택", type=['csv', 'xlsx'], key="upload_tc")
+                
+                if uploaded_file is not None:
+                    try:
+                        if uploaded_file.name.endswith('.csv'):
+                            df = pd.read_csv(uploaded_file)
+                        else:
+                            df = pd.read_excel(uploaded_file)
+                        
+                        required_columns = ['NO', 'CATEGORY', 'DEPTH 1', 'DEPTH 2', 'DEPTH 3', 'PRE-CONDITION', 'STEP', 'EXPECT RESULT']
+                        
+                        if not all(col in df.columns for col in required_columns):
+                            st.warning("컬럼명이 일치하지 않습니다. 데이터를 확인해주세요.")
+                            st.dataframe(df.head())
+                        else:
+                            st.session_state.edit_df = df[required_columns].fillna('')
+                            st.success(f"✅ {len(df)}개 행이 로드되었습니다!")
+                            st.info("👆 위의 표를 확인하고 '💾 표 형식 저장' 버튼을 눌러주세요.")
+                            
+                    except Exception as e:
+                        st.error(f"파일 읽기 오류: {str(e)}")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # 테스트 케이스 요약
+            st.subheader(f"📋 저장된 테스트 케이스")
+            st.metric("전체 케이스 수", f"{len(st.session_state.test_cases)}개")
+            
+            # JSON 다운로드 버튼
+            if st.session_state.test_cases:
+                json_data = json.dumps(st.session_state.test_cases, ensure_ascii=False, indent=2)
+                st.download_button(
+                    label="📥 JSON 파일 다운로드",
+                    data=json_data,
+                    file_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+            
+            if st.session_state.test_cases:
+                categories = {}
+                for tc in st.session_state.test_cases:
+                    cat = tc.get('category', '미분류')
+                    categories[cat] = categories.get(cat, 0) + 1
+                
+                with st.expander("📊 카테고리별 통계", expanded=False):
+                    for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
+                        st.write(f"**{cat}**: {count}개")
+                
+                # 새 탭으로 열기 링크
+                st.markdown(
+                    '<a href="?page=test_cases" target="_blank" style="text-decoration: none;">'
+                    '<button style="width: 100%; padding: 10px; background-color: #f0f2f6; border: 1px solid #d0d0d0; border-radius: 5px; cursor: pointer;">'
+                    '📝 전체 테스트 케이스 보기 (새 탭) →'
+                    '</button></a>',
+                    unsafe_allow_html=True
+                )
 
         
         # 개발자 도구
