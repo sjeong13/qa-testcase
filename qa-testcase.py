@@ -5,6 +5,7 @@
 #2025-11-12 : JSON 파싱 오류 개선 (간헐적), 속도 향상 개선 함수 추가
 #2025-11-13 : 속도 향상 개선 함수 제거, 줄글 형식/기획 문서에 링크 url 항목 추가, [샘플 테스트 케이스 로드] 버튼 제거, AI 테스트 케이스 저장 기능 추가
 #2025-11-14 : 브라우저 새 탭 전체보기 기능 추가, 기존 테스트 케이스 활용 접힘 상태, 테스트 케이스 표 하나의 케이스로 묶기
+#2025-11-17 : Google Sheets 연동 추가 - 데이터 영구 저장
 
 # =====================================================================================
 
@@ -15,7 +16,8 @@ import google.generativeai as genai
 import os
 import pandas as pd
 from io import BytesIO, StringIO
-from urllib.parse import urlencode
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # Excel 지원 확인
 try:
@@ -37,45 +39,146 @@ def get_gemini_client():
     return genai.GenerativeModel('models/gemini-2.5-flash')
     # return genai.GenerativeModel('models/gemini-2.5-pro') # 품질 중요시
 
-# JSON 파일 경로
-TEST_CASES_FILE = "test_cases.json"
-SPEC_DOCS_FILE = "spec_docs.json"
-
-# JSON 파일에서 테스트 케이스 불러오기
-def load_test_cases_from_file():
+# Google Sheets 연결
+@st.cache_resource
+def get_google_sheets_client():
     try:
-        if os.path.exists(TEST_CASES_FILE):
-            with open(TEST_CASES_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        scope = [
+            'https://spreadsheets.google.com/feeds',
+            'https://www.googleapis.com/auth/drive'
+        ]
+        
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+            st.secrets["gcp_service_account"],
+            scope
+        )
+        
+        client = gspread.authorize(credentials)
+        return client
     except Exception as e:
-        st.error(f"파일 불러오기 실패: {str(e)}")
-    return []
+        st.error(f"Google Sheets 연결 실패: {str(e)}")
+        return None
 
-# JSON 파일로 테스트 케이스 저장
-def save_test_cases_to_file(test_cases):
+# Google Sheets에서 테스트 케이스 불러오기
+def load_test_cases_from_sheets():
     try:
-        with open(TEST_CASES_FILE, 'w', encoding='utf-8') as f:
-            json.dump(test_cases, f, ensure_ascii=False, indent=2)
+        client = get_google_sheets_client()
+        if not client:
+            return []
+        
+        sheet_id = st.secrets.get("TESTCASES_SHEET_ID")
+        if not sheet_id:
+            st.warning("⚠️ TESTCASES_SHEET_ID가 설정되지 않았습니다.")
+            return []
+        
+        sheet = client.open_by_key(sheet_id).sheet1
+        data = sheet.get_all_records()
+        
+        # 데이터가 있으면 JSON으로 변환
+        if data:
+            test_cases = []
+            for row in data:
+                # JSON 문자열로 저장된 데이터를 파싱
+                if row.get('json_data'):
+                    test_cases.append(json.loads(row['json_data']))
+            return test_cases
+        return []
+    except Exception as e:
+        st.error(f"테스트 케이스 불러오기 실패: {str(e)}")
+        return []
+
+# Google Sheets에 테스트 케이스 저장
+def save_test_cases_to_sheets(test_cases):
+    try:
+        client = get_google_sheets_client()
+        if not client:
+            return False
+        
+        sheet_id = st.secrets.get("TESTCASES_SHEET_ID")
+        if not sheet_id:
+            st.warning("⚠️ TESTCASES_SHEET_ID가 설정되지 않았습니다.")
+            return False
+        
+        sheet = client.open_by_key(sheet_id).sheet1
+        
+        # 기존 데이터 삭제
+        sheet.clear()
+        
+        # 헤더 추가
+        sheet.append_row(['id', 'category', 'name', 'created_at', 'json_data'])
+        
+        # 데이터 추가
+        for tc in test_cases:
+            sheet.append_row([
+                tc.get('id', ''),
+                tc.get('category', ''),
+                tc.get('name', ''),
+                tc.get('created_at', ''),
+                json.dumps(tc, ensure_ascii=False)
+            ])
+        
         return True
     except Exception as e:
-        st.error(f"파일 저장 실패: {str(e)}")
+        st.error(f"테스트 케이스 저장 실패: {str(e)}")
         return False
 
-# JSON 파일에서 기획 문서 불러오기
-def load_spec_docs_from_file():
+# Google Sheets에서 기획 문서 불러오기
+def load_spec_docs_from_sheets():
     try:
-        if os.path.exists(SPEC_DOCS_FILE):
-            with open(SPEC_DOCS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        client = get_google_sheets_client()
+        if not client:
+            return []
+        
+        sheet_id = st.secrets.get("SPECDOCS_SHEET_ID")
+        if not sheet_id:
+            st.warning("⚠️ SPECDOCS_SHEET_ID가 설정되지 않았습니다.")
+            return []
+        
+        sheet = client.open_by_key(sheet_id).sheet1
+        data = sheet.get_all_records()
+        
+        # 데이터가 있으면 JSON으로 변환
+        if data:
+            spec_docs = []
+            for row in data:
+                if row.get('json_data'):
+                    spec_docs.append(json.loads(row['json_data']))
+            return spec_docs
+        return []
     except Exception as e:
         st.error(f"기획 문서 불러오기 실패: {str(e)}")
-    return []
+        return []
 
-# JSON 파일로 기획 문서 저장
-def save_spec_docs_to_file(spec_docs):
+# Google Sheets에 기획 문서 저장
+def save_spec_docs_to_sheets(spec_docs):
     try:
-        with open(SPEC_DOCS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(spec_docs, f, ensure_ascii=False, indent=2)
+        client = get_google_sheets_client()
+        if not client:
+            return False
+        
+        sheet_id = st.secrets.get("SPECDOCS_SHEET_ID")
+        if not sheet_id:
+            st.warning("⚠️ SPECDOCS_SHEET_ID가 설정되지 않았습니다.")
+            return False
+        
+        sheet = client.open_by_key(sheet_id).sheet1
+        
+        # 기존 데이터 삭제
+        sheet.clear()
+        
+        # 헤더 추가
+        sheet.append_row(['id', 'title', 'doc_type', 'created_at', 'json_data'])
+        
+        # 데이터 추가
+        for doc in spec_docs:
+            sheet.append_row([
+                doc.get('id', ''),
+                doc.get('title', ''),
+                doc.get('doc_type', ''),
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                json.dumps(doc, ensure_ascii=False)
+            ])
+        
         return True
     except Exception as e:
         st.error(f"기획 문서 저장 실패: {str(e)}")
@@ -83,10 +186,10 @@ def save_spec_docs_to_file(spec_docs):
 
 # 세션 스테이트 초기화
 if 'test_cases' not in st.session_state:
-    st.session_state.test_cases = load_test_cases_from_file()
+    st.session_state.test_cases = load_test_cases_from_sheets()
 
 if 'spec_docs' not in st.session_state:
-    st.session_state.spec_docs = load_spec_docs_from_file()
+    st.session_state.spec_docs = load_spec_docs_from_sheets()
 
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
@@ -397,7 +500,13 @@ else:
     # 사이드바
     with st.sidebar:
         st.header("👾 WELCOME")
-        
+
+            # Google Sheets 연결 상태 표시
+            if get_google_sheets_client():
+                st.success("☁️ Google Sheets 연결됨")
+            else:
+                st.error("❌ Google Sheets 연결 실패")
+
         st.markdown("---")
         
         # 탭으로 구분
@@ -1076,6 +1185,6 @@ else:
 
 
     #### 💾 데이터 백업
-    - JSON 다운로드 버튼으로 테스트 케이스와 기획 문서를 정기적으로 백업할 수 있습니다.
-    - 앱 재배포 시 데이터가 초기화될 수 있습니다.
+    - ☁️ **Google Sheets에 자동 저장됩니다**
+   ź- 📥 **JSON 다운로드**: 백업용으로 수동 다운로드도 가능합니다.
     """)
