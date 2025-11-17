@@ -288,7 +288,7 @@ if page == "test_cases":
         for tc in st.session_state.test_cases:
             # 입력 방식 배지 설정
             if tc.get('input_type') == 'table_group':
-                input_type_badge = "🔹 표"
+                input_type_badge = "🔹"
                 header = f"{tc['name']}"
             elif tc.get('input_type') == 'ai_generated_group':
                 input_type_badge = "🦾 AI 생성"
@@ -301,7 +301,7 @@ if page == "test_cases":
                 header = f"[{data['category']}] {data['depth1']}"
                 if data.get('depth2'):
                     header += f" > {data['depth2']}"
-                input_type_badge = "🔹 표"
+                input_type_badge = "🔹"
             else:
                 header = f"[{tc['category']}] {tc['name']}"
                 input_type_badge = "📥"
