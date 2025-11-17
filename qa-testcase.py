@@ -1162,10 +1162,18 @@ else:
         
         if st.session_state.search_history:
             for i, history in enumerate(reversed(st.session_state.search_history[-5:]), 1):
-                with st.expander(f"{history['timestamp'][:10]} - {history['query'][:20]}...", expanded=(i==1)):
-                    st.write(f"**검색어:** {history['query']}")
+                # ✅ 안전한 접근 - history가 None이거나 dict가 아니면 스킵
+                if not history or not isinstance(history, dict):
+                    continue
+                    
+                # ✅ 필수 키 확인
+                timestamp = history.get('timestamp', '알 수 없음')
+                query = history.get('query', '검색어 없음')
 
-                    # ✅ 안전한 접근
+                with st.expander(f"{timestamp[:10]} - {query[:20]}...", expanded=(i==1)):
+                    st.write(f"**검색어:** {query}")
+
+                    # ✅ response 안전한 접근
                     if history.get('response') and isinstance(history['response'], dict):
                         existing_count = len(history['response'].get('existing_test_cases', []))
                         new_count = len(history['response'].get('new_test_cases', []))
