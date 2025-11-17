@@ -1012,7 +1012,7 @@ else:
                                 
                                 st.session_state.search_history.append({
                                     "query": search_query,
-                                    # "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                                     "response": ai_response
                                 })
 
