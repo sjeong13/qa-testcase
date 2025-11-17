@@ -903,42 +903,42 @@ else:
                 key="search_input"
             )
 
-        # ✅ 연관성 기반 필터링 함수
-        def get_relevant_test_cases(query, test_cases, max_cases=50):
-            """검색어와 연관성 높은 테스트 케이스 추출"""
-            # 1. 검색어에서 주요 키워드 추출 (소문자 변환)
-            query_keywords = set(query.lower().split())
-            scored_cases = []
+# ✅ 연관성 기반 필터링 함수
+def get_relevant_test_cases(query, test_cases, max_cases=50):
+    """검색어와 연관성 높은 테스트 케이스 추출"""
+    # 1. 검색어에서 주요 키워드 추출 (소문자 변환)
+    query_keywords = set(query.lower().split())
+    scored_cases = []
 
-            # 2. 각 테스트 케이스의 연관성 점수 계산
-            for tc in test_cases:
-                score = 0
+    # 2. 각 테스트 케이스의 연관성 점수 계산
+    for tc in test_cases:
+        score = 0
                 
-                # 카테고리 매칭 (가중치 3)
-                if tc.get('category') and any(k in tc['category'].lower() for k in query_keywords):
-                    score += 1
+        # 카테고리 매칭 (가중치 3)
+        if tc.get('category') and any(k in tc['category'].lower() for k in query_keywords):
+            score += 1
 
-                # 이름/제목 매칭 (가중치 2)
-                if tc.get('name') and any(k in tc['name'].lower() for k in query_keywords):
-                    score += 2
+        # 이름/제목 매칭 (가중치 2)
+        if tc.get('name') and any(k in tc['name'].lower() for k in query_keywords):
+            score += 2
 
-                # 설명/내용 매칭 (가중치 1)
-                if tc.get('description') and any(k in tc['description'].lower() for k in query_keywords):
-                    score += 5
+        # 설명/내용 매칭 (가중치 1)
+        if tc.get('description') and any(k in tc['description'].lower() for k in query_keywords):
+            score += 5
 
-                # 표 데이터 매칭 (가중치 1)
-                if tc.get('table_data'):
-                    for row in tc['table_data']:
-                        if any(k in str(row).lower() for k in query_keywords):
-                            score += 3
-                            break
-                scored_cases.append((score, tc))
+        # 표 데이터 매칭 (가중치 1)
+        if tc.get('table_data'):
+            for row in tc['table_data']:
+                if any(k in str(row).lower() for k in query_keywords):
+                    score += 3
+                    break
+        scored_cases.append((score, tc))
 
-            # 3. 점수 높은 순으로 정렬 후 상위 N개 선택
-            scored_cases.sort(reverse=True, key=lambda x: x[0])
-            relevant = [tc for score, tc in scored_cases if score > 0][:max_cases]
-            # 4. 연관성 없으면 최근 케이스 반환
-            return relevant if relevant else test_cases[-max_cases:]
+    # 3. 점수 높은 순으로 정렬 후 상위 N개 선택
+    scored_cases.sort(reverse=True, key=lambda x: x[0])
+    relevant = [tc for score, tc in scored_cases if score > 0][:max_cases]
+    # 4. 연관성 없으면 최근 케이스 반환
+    return relevant if relevant else test_cases[-max_cases:]
             
             if st.button("AI 추천 받기", type="primary"):
                 if search_query:
