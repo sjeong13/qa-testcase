@@ -664,7 +664,7 @@ else:
                 )
 
                 tc_free_link = st.text_input(
-                    "링크 URL *",
+                    "링크 URL",
                     placeholder="https://www.notion.so/imweb/...",
                     key="tab1_tc_free_link"
                 )
@@ -684,7 +684,7 @@ else:
                 
                 # 저장 버튼 및 로직
                 if st.button("💾 줄글 형식 저장", type="primary", key="tab1_save_free_form_tc"):
-                    if not tc_free_title or not tc_free_link or not tc_free_content or not tc_free_category:
+                    if not tc_free_title or not tc_free_content or not tc_free_category:
                         st.warning("⚠️ 모든 항목을 입력해주세요!")
                     else:
                         # 줄글 형식으로 저장
