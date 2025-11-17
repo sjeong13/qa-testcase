@@ -1164,10 +1164,15 @@ else:
             for i, history in enumerate(reversed(st.session_state.search_history[-5:]), 1):
                 with st.expander(f"{history['timestamp'][:10]} - {history['query'][:20]}...", expanded=(i==1)):
                     st.write(f"**검색어:** {history['query']}")
-                    existing_count = len(history['response'].get('existing_test_cases', []))
-                    new_count = len(history['response'].get('new_test_cases', []))
-                    st.write(f"**기존 테스트:** {existing_count}개")
-                    st.write(f"**신규 생성:** {new_count}개")
+
+                    # ✅ 안전한 접근
+                    if history.get('response') and isinstance(history['response'], dict):
+                        existing_count = len(history['response'].get('existing_test_cases', []))
+                        new_count = len(history['response'].get('new_test_cases', []))
+                        st.write(f"**기존 테스트:** {existing_count}개")
+                        st.write(f"**신규 생성:** {new_count}개")
+                    else:
+                        st.warning("⚠️ 이 검색은 오류가 발생했습니다.")
         else:
             st.info("아직 검색 히스토리가 없습니다.")
 
